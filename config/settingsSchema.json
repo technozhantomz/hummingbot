@@ -2,11 +2,11 @@
     "properties": {
         "cartTitle": {
             "type": "string",
-            "default": "NFT Store"
+            "default": "commodity Store"
         },
         "cartDescription": {
             "type": "string",
-            "default": "This is my NFT Store"
+            "default": "This is my commodity Store"
         },
         "cartLogo": {
             "type": "string"
@@ -48,7 +48,7 @@
         },
         "footerHtml": {
             "type": "string",
-            "default": "&lt;h4 class=&quot;text-center&quot;&gt;Powered by Peerplays&lt;/h4&gt;"
+            "default": "&lt;h4 class=&quot;text-center&quot;&gt;This is a Multi-commodity centre&lt;/h4&gt;"
         },
         "googleAnalytics": {
             "type": "string"

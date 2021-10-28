@@ -1,5 +1,5 @@
 {
-    "cartTitle": "Market Commodity",
+    "cartTitle": "Commodities",
     "cartDescription": "Market Commodity",
     "cartLogo": "",
     "baseUrl": "http://market.commodity.llc",
@@ -48,15 +48,15 @@
     },
     "showRelatedProducts": true,
     "showHomepageVariants": true,
-    "peeridUrl": "http://register.commodity.llc/api/v1/",
+    "peeridUrl": "https://api.commodity.llc/api/v1/",
     "peeridClientID": "1",
     "peeridClientSecret": "XvCSvLqRgqUtGVO9wlvrk8FX9guyPe30jrqs8UTmFc",
-    "peeridRedirectUri": "http://market.commodity.llc/peerid_auth/redirect",
+    "peeridRedirectUri": "https://market.commodity.llc/peerid_auth/redirect",
     "peerplaysAssetID": "1.3.0",
     "peerplaysAssetSymbol": "USD",
     "peerplaysAssetPrecision": 5,
-    "peerplaysAccountID": "1.2.21",
+    "peerplaysAccountID": "1.2.23",
     "ppyExchangeRate": 1,
     "commission": 2,
-    "categories": ["Digital Art", "Photographs", "Oil Paintings", "Collectibles", "Fashion", "Games"]
+    "categories": ["Showroom cars","Digital Art", "Solar roof & Solar systems", "Photographs", "Oil Paintings", "Collectibles", "Fashion", "Games"]
 }

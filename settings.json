@@ -1,0 +1,62 @@
+{
+   "cartTitle": "Market Commodity",
+    "cartDescription": "Market Commodity",
+    "cartLogo": "",
+    "baseUrl": "http://localhost:1111",
+    "emailHost": "smtp-mail.outlook.com",
+    "emailPort": 587,
+    "emailSecure": false,
+    "emailUser": "sd",
+    "emailPassword": "NewNew321$$",
+    "emailAddress": "sd@commodity.llc",
+    "productsPerRow": 3,
+    "productsPerPage": 6,
+    "footerHtml": "&lt;h4 class=&quot;text-center&quot;&gt;Commodity enterprise centre&lt;",
+    "googleAnalytics": "",
+    "injectJs": "",
+    "customCss": "",
+    "currencySymbol": "$",
+    "currencyISO": "USD",
+    "paymentGateway": [
+        "stripe" 
+    ],
+    "databaseConnectionString": "mongodb://localhost:27017/expresscart",
+    "theme": "Cloth",
+    "trackStock": false,
+    "orderHook": "",    
+    "availableLanguages": [
+        "en",
+        "it"
+    ],
+    "defaultLocale": "en",
+    "maxQuantity": 25,
+    "twitterHandle": "",
+    "facebookAppId": "",
+    "productOrderBy": "date",
+    "productOrder": "descending",
+    "modules": {
+        "enabled": {
+            "shipping": "shipping-basic",
+            "discount": "discount-voucher",
+            "reviews": "reviews-basic"
+        },
+        "loaded": {
+            "shipping": {},
+            "discount": {},
+            "reviews": {}
+        }
+    },
+    "showRelatedProducts": true,
+    "showHomepageVariants": false,
+    "peeridUrl": "http://174.138.11.200:3000",
+    "peeridClientID": "1",
+    "peeridClientSecret": "ufaufgxO3FiI0HPSB3YY3fKgYJiwi4Dko7fbkmpAkR",
+    "peeridRedirectUri": "http://market.commodity.llc/peerid_auth/redirect",
+    "peerplaysAssetID": "1.3.0",
+    "peerplaysAssetSymbol": "USD",
+    "peerplaysAssetPrecision": 5,
+    "peerplaysAccountID": "1.2.39",
+    "ppyExchangeRate": 1,
+    "commission": 2,
+    "categories": ["Tesla-solar roofing", "Vehicles","Digital Art", "Photographs", "Oil Paintings", "Collectibles", "Fashion", "Games"]
+}
