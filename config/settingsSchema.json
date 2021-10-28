@@ -2,11 +2,11 @@
     "properties": {
         "cartTitle": {
             "type": "string",
-            "default": "commodity Store"
+            "default": "Market Commodity"
         },
         "cartDescription": {
             "type": "string",
-            "default": "This is my commodity Store"
+            "default": "Commodity Market"
         },
         "cartLogo": {
             "type": "string"
@@ -14,7 +14,7 @@
         "baseUrl": {
             "type": "string",
             "format": "uri-template",
-            "default": "http://localhost:1111"
+            "default": "http://market.commodity.llc"
         },
         "emailHost": {
             "format": "uri-template",
@@ -48,7 +48,7 @@
         },
         "footerHtml": {
             "type": "string",
-            "default": "&lt;h4 class=&quot;text-center&quot;&gt;This is a Multi-commodity centre&lt;/h4&gt;"
+            "default": "&lt;h4 class=&quot;text-center&quot;&gt;Commodity enterprise centre&lt;/h4&gt;"
         },
         "googleAnalytics": {
             "type": "string"
@@ -191,27 +191,27 @@
         },
         "peeridUrl": {
           "type": "string",
-          "default": ""
+          "default": "http://register.commodity.llc/api/v1/"
         },
         "peeridClientID": {
           "type": "string",
-          "default": ""
+          "default": "1"
         },
         "peeridClientSecret": {
           "type": "string",
-          "default": ""
+          "default": "XvCSvLqRgqUtGVO9wlvrk8FX9guyPe30jrqs8UTmFc"
         },
         "peeridRedirectUri": {
           "type": "string",
-          "default": ""
+          "default": "http://market.commodity.llc/peerid_auth/redirect"
         },
         "peerplaysAssetID": {
           "type": "string",
-          "default": ""
+          "default": "1.3.0"
         },
         "peerplaysAssetSymbol": {
             "type": "string",
-            "default": ""
+            "default": "USD"
         },
         "peerplaysAssetPrecision": {
             "type": "number",
@@ -219,7 +219,7 @@
         },
         "peerplaysAccountID": {
           "type": "string",
-          "default": ""
+          "default": "1.2.21"
         },
         "ppyExchangeRate": {
             "type": "number"
