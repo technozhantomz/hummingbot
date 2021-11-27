@@ -391,7 +391,7 @@ app.use(i18n.init);
 
 // serving static content
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.static(path.join(__dirname, 'views', 'themes')));
+app.use(express.static(path.join(__dirname, 'views', 'themes', 'cloth')));
 app.use(express.static(path.join(__dirname, 'node_modules', 'feather-icons')));
 
 // Make stuff accessible to our router
