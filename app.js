@@ -391,7 +391,7 @@ app.use(i18n.init);
 
 // serving static content
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.static(path.join(__dirname, 'views', 'themes', 'cloth')));
+app.use(express.static(path.join(__dirname, 'views', 'themes')));
 app.use(express.static(path.join(__dirname, 'node_modules', 'feather-icons')));
 
 // Make stuff accessible to our router
@@ -539,10 +539,10 @@ initDb(config.databaseConnectionString, async (err, db) => {
         await app.listen(app.get('port'));
         app.emit('appStarted');
         if(process.env.NODE_ENV !== 'test'){
-            console.log(colors.green(`NFT Store running on host: http://localhost:${app.get('port')}`));
+            console.log(colors.green(`CommodityLLC Store running on host: http://localhost:${app.get('port')}`));
         }
     }catch(ex){
-        console.error(colors.red(`Error starting NFT Store app:${ex.message}`));
+        console.error(colors.red(`Error starting CommodityLLC Store app:${ex.message}`));
         process.exit(2);
     }
 });
