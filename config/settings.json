@@ -48,7 +48,7 @@
     },
    "showRelatedProducts": true,
     "showHomepageVariants": true,
-    "peeridUrl": "https://api.commodity.llc/api/v1/",
+    "peeridUrl": "https://register.commodity.llc/api/v1/",
     "peeridClientID": "3",
     "peeridClientSecret": "R8Zf4RDLn6ESLJYl44AVy6BSDv8CnsqxIJotX8RSNA",
     "peeridRedirectUri": "https://market.commodity.llc/peerid_auth/redirect",
