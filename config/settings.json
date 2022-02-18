@@ -11,7 +11,7 @@
     "emailAddress": "extraqa@gmail.com",
     "productsPerRow": 3,
     "productsPerPage": 6,
-    "footerHtml": "&lt;h4 class=&quot;text-center&quot;&gt; Welcome to Commodities Centre",
+    "footerHtml": "&lt;h4 class=&quot;text-center&quot;&gt; Welcome to Commodities Centre&gt",
     "googleAnalytics": "",
     "injectJs": "",
     "customCss": "",
@@ -20,7 +20,7 @@
     "paymentGateway": [
         "stripe" 
     ],
-    "databaseConnectionString": "mongodb://localhost:27017/expresscart",
+    "databaseConnectionString": "mongodb://localhost:27017/market",
     "theme": "Cloth",
     "trackStock": false,
     "orderHook": "",    
