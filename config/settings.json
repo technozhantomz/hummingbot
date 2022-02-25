@@ -2,7 +2,7 @@
   "cartTitle": "Commodities",
     "cartDescription": "Market Commodity",
     "cartLogo": "",
-    "baseUrl": "http://localhost:1111",
+    "baseUrl": "http://127.0.0.1:1111",
     "emailHost": "smtp.gmail.com",
     "emailPort": 587,
     "emailSecure": false,
@@ -20,7 +20,7 @@
     "paymentGateway": [
         "stripe" 
     ],
-    "databaseConnectionString": "mongodb://localhost:27017/market",
+    "databaseConnectionString": "mongodb://127.0.0.1:27017/expresscart",
     "theme": "Cloth",
     "trackStock": false,
     "orderHook": "",    
@@ -47,16 +47,16 @@
         }
     },
    "showRelatedProducts": true,
-    "showHomepageVariants": true,
+    "showHomepageVariants": false,
     "peeridUrl": "https://api.commodity.llc/api/v1/",
     "peeridClientID": "8",
     "peeridClientSecret": "kRrH0t2KoqcHEbM51aschGGuHMS0zfLQuIxyGDNeR4",
     "peeridRedirectUri": "https://market.commodity.llc/peerid_auth/redirect",
     "peerplaysAssetID": "1.3.0",
     "peerplaysAssetSymbol": "USD",
-    "peerplaysAssetPrecision": 2,
+    "peerplaysAssetPrecision": 5,
     "peerplaysAccountID": "1.2.21",
-    "ppyExchangeRate": 2,
-    "commission": 2,
+    "ppyExchangeRate": 1,
+    "commission": 10,
     "categories": ["Digital Art", "Photographs", "Oil Paintings", "Collectibles", "Fashion", "Games"]
 }

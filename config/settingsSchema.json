@@ -2,7 +2,7 @@
     "properties": {
         "cartTitle": {
             "type": "string",
-            "default": "CommodityLLC"
+            "default": "expressCart"
         },
         "cartDescription": {
             "type": "string",
@@ -14,7 +14,7 @@
         "baseUrl": {
             "type": "string",
             "format": "uri-template",
-            "default": "http://localhost:1111"
+            "default": "http://127.0.0.1:1111"
         },
         "emailHost": {
             "format": "uri-template",
@@ -61,7 +61,7 @@
         },
         "currencySymbol": {
             "type": "string",
-            "default": "£"
+            "default": "$"
         },
         "currencyISO": {
             "type": "string",
