@@ -53,7 +53,7 @@ class CryptoComWebsocket:
 
     def __init__(self, auth: Optional[CryptoComAuth] = None, shared_client: Optional[aiohttp.ClientSession] = None):
         self._auth: Optional[CryptoComAuth] = auth
-        self._is_private = True if self._auth is not None else False
+        self._is_private = self._auth is not None
         self._WS_URL = CONSTANTS.WSS_PRIVATE_URL if self._is_private else CONSTANTS.WSS_PUBLIC_URL
         self._shared_client = shared_client
         self._websocket: Optional[aiohttp.ClientWebSocketResponse] = None

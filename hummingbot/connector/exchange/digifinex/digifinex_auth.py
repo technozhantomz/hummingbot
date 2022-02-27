@@ -34,7 +34,7 @@ class DigifinexAuth():
     @classmethod
     async def query_time_func() -> float:
         async with aiohttp.ClientSession() as session:
-            async with session.get(Constants.REST_URL + '/time') as resp:
+            async with session.get(f'{Constants.REST_URL}/time') as resp:
                 resp_data: Dict[str, float] = await resp.json()
                 return float(resp_data["server_time"])
 
@@ -54,13 +54,11 @@ class DigifinexAuth():
         ).hexdigest()
         nonce = int(self.time_patcher.time())
 
-        header = {
+        return {
             'ACCESS-KEY': self.api_key,
             'ACCESS-TIMESTAMP': str(nonce),
             'ACCESS-SIGN': sig,
         }
-
-        return header
 
     def generate_ws_signature(self) -> List[Any]:
         data = [None] * 3

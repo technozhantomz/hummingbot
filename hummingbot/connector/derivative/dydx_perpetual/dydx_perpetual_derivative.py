@@ -281,9 +281,7 @@ class DydxPerpetualDerivative(ExchangeBase, PerpetualTrading):
     ) -> Dict[str, Any]:
 
         order_side = "BUY" if is_buy else "SELL"
-        post_only = False
-        if order_type is OrderType.LIMIT_MAKER:
-            post_only = True
+        post_only = order_type is OrderType.LIMIT_MAKER
         dydx_order_type = "LIMIT" if order_type in [OrderType.LIMIT, OrderType.LIMIT_MAKER] else "MARKET"
 
         return await self.dydx_client.place_order(
@@ -480,43 +478,42 @@ class DydxPerpetualDerivative(ExchangeBase, PerpetualTrading):
 
         try:
             if exchange_order_id is None:
-                # Note, we have no way of canceling an order or querying for information about the order
-                # without an exchange_order_id
-                if in_flight_order.created_at < (int(self.time_now_s()) - UNRECOGNIZED_ORDER_DEBOUCE):
-                    # We'll just have to assume that this order doesn't exist
-                    self.stop_tracking_order(in_flight_order.client_order_id)
-                    self.trigger_event(ORDER_CANCELLED_EVENT, cancellation_event)
-                    return False
-                else:
+                if (
+                    in_flight_order.created_at
+                    >= int(self.time_now_s()) - UNRECOGNIZED_ORDER_DEBOUCE
+                ):
                     raise Exception(f"order {client_order_id} has no exchange id")
+                # We'll just have to assume that this order doesn't exist
+                self.stop_tracking_order(in_flight_order.client_order_id)
+                self.trigger_event(ORDER_CANCELLED_EVENT, cancellation_event)
+                return False
             await self.dydx_client.cancel_order(exchange_order_id)
             return True
 
         except DydxApiError as e:
             if f"Order with specified id: {exchange_order_id} could not be found" in str(e):
-                if in_flight_order.created_at < (int(self.time_now_s()) - UNRECOGNIZED_ORDER_DEBOUCE):
-                    # Order didn't exist on exchange, mark this as canceled
-                    self.stop_tracking_order(in_flight_order.client_order_id)
-                    self.trigger_event(ORDER_CANCELLED_EVENT, cancellation_event)
-                    return False
-                else:
+                if (
+                    in_flight_order.created_at
+                    >= int(self.time_now_s()) - UNRECOGNIZED_ORDER_DEBOUCE
+                ):
                     raise Exception(
                         f"order {client_order_id} does not yet exist on the exchange and could not be cancelled."
                     )
+                # Order didn't exist on exchange, mark this as canceled
+                self.stop_tracking_order(in_flight_order.client_order_id)
+                self.trigger_event(ORDER_CANCELLED_EVENT, cancellation_event)
             elif "is already canceled" in str(e):
                 self.stop_tracking_order(in_flight_order.client_order_id)
                 self.trigger_event(ORDER_CANCELLED_EVENT, cancellation_event)
-                return False
             elif "is already filled" in str(e):
                 response = await self.dydx_client.get_order(exchange_order_id)
                 order_status = response["order"]
                 in_flight_order.update(order_status)
                 self._issue_order_events(in_flight_order)
                 self.stop_tracking_order(in_flight_order.client_order_id)
-                return False
             else:
                 self.logger().warning(f"Unable to cancel order {exchange_order_id}: {str(e)}")
-                return False
+            return False
         except Exception as e:
             self.logger().warning(f"Failed to cancel order {client_order_id}")
             self.logger().info(e)
@@ -686,11 +683,14 @@ class DydxPerpetualDerivative(ExchangeBase, PerpetualTrading):
         if exchange_order_id in self._in_flight_orders_by_exchange_id:
             return self._in_flight_orders_by_exchange_id[exchange_order_id]
 
-        for o in self._in_flight_orders.values():
-            if o.exchange_order_id == exchange_order_id:
-                return o
-
-        return None
+        return next(
+            (
+                o
+                for o in self._in_flight_orders.values()
+                if o.exchange_order_id == exchange_order_id
+            ),
+            None,
+        )
 
     # ----------------------------------------
     # updates to orders and balances
@@ -862,8 +862,8 @@ class DydxPerpetualDerivative(ExchangeBase, PerpetualTrading):
                             if position_key not in self._account_positions and market in self._trading_pairs:
                                 self._create_position_from_rest_pos_item(position)
                 if "accounts" in data:
+                    quote = "USD"
                     for account in data["accounts"]:
-                        quote = "USD"
                         self._account_available_balances[quote] = Decimal(account["quoteBalance"])
                 if "orders" in data:
                     for order in data["orders"]:
@@ -902,11 +902,10 @@ class DydxPerpetualDerivative(ExchangeBase, PerpetualTrading):
                                     tracked_order, amount, price, self.get_available_balance("USD")
                                 )
                             self._issue_order_events(tracked_order)
-                        else:
-                            if len(self._orders_pending_ack) > 0:
-                                self._unclaimed_fills[exchange_order_id].add(
-                                    DydxPerpetualFillReport(id, amount, price, fee_paid)
-                                )
+                        elif len(self._orders_pending_ack) > 0:
+                            self._unclaimed_fills[exchange_order_id].add(
+                                DydxPerpetualFillReport(id, amount, price, fee_paid)
+                            )
                 if "positions" in data:
                     # this is hit when a position is closed
                     positions = data["positions"]
@@ -924,29 +923,28 @@ class DydxPerpetualDerivative(ExchangeBase, PerpetualTrading):
                             )
                             if not self._account_positions[pos_key].is_open:
                                 del self._account_positions[pos_key]
-                if "fundingPayments" in data:
-                    if event["type"] != "subscribed":  # Only subsequent funding payments
-                        for funding_payment in data["fundingPayments"]:
-                            if funding_payment["market"] not in self._trading_pairs:
-                                continue
-                            ts = dateparse(funding_payment["effectiveAt"]).timestamp()
-                            funding_rate: Decimal = Decimal(funding_payment["rate"])
-                            trading_pair: str = funding_payment["market"]
-                            payment: Decimal = Decimal(funding_payment["payment"])
-                            action: str = "paid" if payment < s_decimal_0 else "received"
+                if "fundingPayments" in data and event["type"] != "subscribed":
+                    for funding_payment in data["fundingPayments"]:
+                        if funding_payment["market"] not in self._trading_pairs:
+                            continue
+                        ts = dateparse(funding_payment["effectiveAt"]).timestamp()
+                        funding_rate: Decimal = Decimal(funding_payment["rate"])
+                        trading_pair: str = funding_payment["market"]
+                        payment: Decimal = Decimal(funding_payment["payment"])
+                        action: str = "paid" if payment < s_decimal_0 else "received"
 
-                            self.logger().info(f"Funding payment of {payment} {action} on {trading_pair} market")
-                            self.trigger_event(
-                                MARKET_FUNDING_PAYMENT_COMPLETED_EVENT_TAG,
-                                FundingPaymentCompletedEvent(
-                                    timestamp=ts,
-                                    market=self.name,
-                                    funding_rate=funding_rate,
-                                    trading_pair=trading_pair,
-                                    amount=payment,
-                                ),
-                            )
-                            self._trading_pair_last_funding_payment_ts[trading_pair] = ts
+                        self.logger().info(f"Funding payment of {payment} {action} on {trading_pair} market")
+                        self.trigger_event(
+                            MARKET_FUNDING_PAYMENT_COMPLETED_EVENT_TAG,
+                            FundingPaymentCompletedEvent(
+                                timestamp=ts,
+                                market=self.name,
+                                funding_rate=funding_rate,
+                                trading_pair=trading_pair,
+                                amount=payment,
+                            ),
+                        )
+                        self._trading_pair_last_funding_payment_ts[trading_pair] = ts
             except asyncio.CancelledError:
                 raise
             except Exception:
@@ -997,10 +995,12 @@ class DydxPerpetualDerivative(ExchangeBase, PerpetualTrading):
                     del self._account_positions[pos_key]
             elif market in self._trading_pairs:
                 self._create_position_from_rest_pos_item(position)
-        positions_to_delete = []
-        for position_str in self._account_positions:
-            if position_str not in current_positions["openPositions"]:
-                positions_to_delete.append(position_str)
+        positions_to_delete = [
+            position_str
+            for position_str in self._account_positions
+            if position_str not in current_positions["openPositions"]
+        ]
+
         for account_position in positions_to_delete:
             del self._account_positions[account_position]
 
@@ -1077,12 +1077,15 @@ class DydxPerpetualDerivative(ExchangeBase, PerpetualTrading):
 
                 # check if this error is because the api cliams to be unaware of this order. If so, and this order
                 # is reasonably old, mark the orde as cancelled
-                if "could not be found" in str(dydx_order_request["msg"]):
-                    if tracked_order.created_at < (int(self.time_now_s()) - UNRECOGNIZED_ORDER_DEBOUCE):
-                        try:
-                            self.cancel_order(client_order_id)
-                        except Exception:
-                            pass
+                if "could not be found" in str(
+                    dydx_order_request["msg"]
+                ) and tracked_order.created_at < (
+                    int(self.time_now_s()) - UNRECOGNIZED_ORDER_DEBOUCE
+                ):
+                    try:
+                        self.cancel_order(client_order_id)
+                    except Exception:
+                        pass
                 continue
 
             try:
@@ -1232,9 +1235,8 @@ class DydxPerpetualDerivative(ExchangeBase, PerpetualTrading):
         )
         last_tick = int(self._last_poll_timestamp / poll_interval)
         current_tick = int(timestamp / poll_interval)
-        if current_tick > last_tick:
-            if not self._poll_notifier.is_set():
-                self._poll_notifier.set()
+        if current_tick > last_tick and not self._poll_notifier.is_set():
+            self._poll_notifier.set()
         self._last_poll_timestamp = timestamp
 
     def buy(

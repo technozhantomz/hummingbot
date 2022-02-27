@@ -109,8 +109,7 @@ class DydxPerpetualClientWrapper:
         return await f
 
     def sign(self, request_path, method, timestamp, data):
-        sign = self.client.private.sign(request_path=request_path,
+        return self.client.private.sign(request_path=request_path,
                                         method=method,
                                         iso_timestamp=timestamp,
                                         data=data)
-        return sign

@@ -79,7 +79,7 @@ class HuobiAPIOrderBookDataSource(OrderBookTrackerDataSource):
                               url=url)
         response: RESTResponse = await rest_assistant.call(request=request)
 
-        results = dict()
+        results = {}
         resp_json = await response.json()
         for trading_pair in trading_pairs:
             resp_record = [o for o in resp_json["data"] if o["symbol"] == convert_to_exchange_trading_pair(trading_pair)][0]

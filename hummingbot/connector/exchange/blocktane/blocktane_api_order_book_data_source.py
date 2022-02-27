@@ -118,8 +118,7 @@ class BlocktaneAPIOrderBookDataSource(OrderBookTrackerDataSource):
             return order_book
 
     def get_ws_connection(self, stream_url):
-        ws = websockets.connect(stream_url)
-        return ws
+        return websockets.connect(stream_url)
 
     async def _inner_messages(self, ws: websockets.WebSocketClientProtocol) -> AsyncIterable[str]:
         # Terminate the recv() loop as soon as the next message timed out, so the outer loop can reconnect.

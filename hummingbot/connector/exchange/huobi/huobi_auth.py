@@ -69,6 +69,4 @@ class HuobiAuth:
         encoded_params_str = urlencode(params)
         payload = "\n".join([method.upper(), self.hostname, query_endpoint, encoded_params_str])
         digest = hmac.new(self.secret_key.encode("utf8"), payload.encode("utf8"), hashlib.sha256).digest()
-        signature_b64 = base64.b64encode(digest).decode()
-
-        return signature_b64
+        return base64.b64encode(digest).decode()

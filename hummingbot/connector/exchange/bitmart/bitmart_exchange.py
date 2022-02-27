@@ -841,9 +841,8 @@ class BitmartExchange(ExchangeBase):
         """
         last_tick = int(self._last_timestamp / self.POLL_INTERVAL)
         current_tick = int(timestamp / self.POLL_INTERVAL)
-        if current_tick > last_tick:
-            if not self._poll_notifier.is_set():
-                self._poll_notifier.set()
+        if current_tick > last_tick and not self._poll_notifier.is_set():
+            self._poll_notifier.set()
         self._last_timestamp = timestamp
 
     def get_fee(self,
@@ -933,15 +932,18 @@ class BitmartExchange(ExchangeBase):
                 ret_val.append(
                     OpenOrder(
                         client_order_id=tracked_order.client_order_id,
-                        trading_pair=bitmart_utils.convert_from_exchange_trading_pair(order["symbol"]),
+                        trading_pair=bitmart_utils.convert_from_exchange_trading_pair(
+                            order["symbol"]
+                        ),
                         price=Decimal(str(order["price"])),
                         amount=Decimal(str(order["size"])),
                         executed_amount=Decimal(str(order["filled_size"])),
                         status=CONSTANTS.ORDER_STATUS[int(order["status"])],
                         order_type=OrderType.LIMIT,
-                        is_buy=True if order["side"].lower() == "buy" else False,
+                        is_buy=order["side"].lower() == "buy",
                         time=int(order["create_time"]),
-                        exchange_order_id=str(order["order_id"])
+                        exchange_order_id=str(order["order_id"]),
                     )
                 )
+
         return ret_val

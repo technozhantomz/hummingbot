@@ -54,7 +54,7 @@ class BittrexAPIOrderBookDataSource(OrderBookTrackerDataSource):
 
     @classmethod
     async def get_last_traded_prices(cls, trading_pairs: List[str]) -> Dict[str, float]:
-        results = dict()
+        results = {}
         async with aiohttp.ClientSession() as client:
             resp = await client.get(f"{BITTREX_REST_URL}{BITTREX_TICKER_PATH}")
             resp_json = await resp.json()
@@ -175,8 +175,7 @@ class BittrexAPIOrderBookDataSource(OrderBookTrackerDataSource):
         try:
             while True:
                 async with timeout(MESSAGE_TIMEOUT):  # Timeouts if not receiving any messages for 10 seconds(ping)
-                    msg = await connection.msg_queue.get()
-                    yield msg
+                    yield await connection.msg_queue.get()
         except asyncio.TimeoutError:
             self.logger().warning("Message queue get() timed out. Going to reconnect...")
 

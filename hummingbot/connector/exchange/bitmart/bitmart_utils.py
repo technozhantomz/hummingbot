@@ -129,24 +129,22 @@ def get_new_client_order_id(is_buy: bool, trading_pair: str) -> str:
 
 # Decompress WebSocket messages
 def decompress_ws_message(message):
-    if type(message) == bytes:
-        decompress = zlib.decompressobj(-zlib.MAX_WBITS)
-        inflated = decompress.decompress(message)
-        inflated += decompress.flush()
-        return inflated.decode('UTF-8')
-    else:
+    if type(message) != bytes:
         return message
+    decompress = zlib.decompressobj(-zlib.MAX_WBITS)
+    inflated = decompress.decompress(message)
+    inflated += decompress.flush()
+    return inflated.decode('UTF-8')
 
 
 def compress_ws_message(message):
-    if type(message) == str:
-        message = message.encode()
-        compress = zlib.compressobj(wbits=-zlib.MAX_WBITS)
-        deflated = compress.compress(message)
-        deflated += compress.flush()
-        return deflated
-    else:
+    if type(message) != str:
         return message
+    message = message.encode()
+    compress = zlib.compressobj(wbits=-zlib.MAX_WBITS)
+    deflated = compress.compress(message)
+    deflated += compress.flush()
+    return deflated
 
 
 KEYS = {
@@ -172,5 +170,4 @@ KEYS = {
 
 
 def build_api_factory() -> WebAssistantsFactory:
-    api_factory = WebAssistantsFactory()
-    return api_factory
+    return WebAssistantsFactory()

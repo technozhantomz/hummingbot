@@ -247,14 +247,17 @@ class BinancePerpetualDerivative(ExchangeBase, PerpetualTrading):
         t_pair: str = trading_pair
         order_id: str = utils.get_client_order_id("buy", t_pair)
         safe_ensure_future(
-            self._create_order(TradeType.BUY,
-                               order_id,
-                               trading_pair,
-                               amount,
-                               order_type,
-                               kwargs["position_action"],
-                               price)
+            self._create_order(
+                TradeType.BUY,
+                order_id,
+                t_pair,
+                amount,
+                order_type,
+                kwargs["position_action"],
+                price,
+            )
         )
+
         return order_id
 
     def sell(
@@ -286,14 +289,17 @@ class BinancePerpetualDerivative(ExchangeBase, PerpetualTrading):
         t_pair: str = trading_pair
         order_id: str = utils.get_client_order_id("sell", t_pair)
         safe_ensure_future(
-            self._create_order(TradeType.SELL,
-                               order_id,
-                               trading_pair,
-                               amount,
-                               order_type,
-                               kwargs["position_action"],
-                               price)
+            self._create_order(
+                TradeType.SELL,
+                order_id,
+                t_pair,
+                amount,
+                order_type,
+                kwargs["position_action"],
+                price,
+            )
         )
+
         return order_id
 
     async def cancel_all(self, timeout_seconds: float):
@@ -340,11 +346,10 @@ class BinancePerpetualDerivative(ExchangeBase, PerpetualTrading):
                 add_timestamp=True,
                 is_auth_required=True,
             )
-            if response.get("code") == 200:
-                for order_id in list(self._client_order_tracker.active_orders.keys()):
-                    self.stop_tracking_order(order_id)
-            else:
+            if response.get("code") != 200:
                 raise IOError(f"Error cancelling all account orders. Server Response: {response}")
+            for order_id in list(self._client_order_tracker.active_orders.keys()):
+                self.stop_tracking_order(order_id)
         except Exception as e:
             self.logger().error("Could not cancel all account orders.")
             raise e
@@ -475,9 +480,8 @@ class BinancePerpetualDerivative(ExchangeBase, PerpetualTrading):
                          else self.LONG_POLL_INTERVAL)
         last_tick = int(self._last_timestamp / poll_interval)
         current_tick = int(timestamp / poll_interval)
-        if current_tick > last_tick:
-            if not self._poll_notifier.is_set():
-                self._poll_notifier.set()
+        if current_tick > last_tick and not self._poll_notifier.is_set():
+            self._poll_notifier.set()
         if now >= self._next_funding_fee_timestamp + CONSTANTS.FUNDING_SETTLEMENT_DURATION[1]:
             self._funding_fee_poll_notifier.set()
 
@@ -537,10 +541,9 @@ class BinancePerpetualDerivative(ExchangeBase, PerpetualTrading):
         """
         if trading_pair in self._order_book_tracker.data_source.funding_info:
             return self._order_book_tracker.data_source.funding_info[trading_pair]
-        else:
-            self.logger().error(f"Funding Info for {trading_pair} not found. Proceeding to fetch using REST API.")
-            safe_ensure_future(self._order_book_tracker.data_source.get_funding_info(trading_pair))
-            return None
+        self.logger().error(f"Funding Info for {trading_pair} not found. Proceeding to fetch using REST API.")
+        safe_ensure_future(self._order_book_tracker.data_source.get_funding_info(trading_pair))
+        return None
 
     def get_next_funding_timestamp(self):
         # On Binance Futures, Funding occurs every 8 hours at 00:00 UTC; 08:00 UTC and 16:00
@@ -843,11 +846,13 @@ class BinancePerpetualDerivative(ExchangeBase, PerpetualTrading):
             try:
                 await self._funding_fee_poll_notifier.wait()
 
-                tasks = []
-                for trading_pair in self._trading_pairs:
-                    tasks.append(
-                        asyncio.create_task(self._fetch_funding_payment(trading_pair=trading_pair))
+                tasks = [
+                    asyncio.create_task(
+                        self._fetch_funding_payment(trading_pair=trading_pair)
                     )
+                    for trading_pair in self._trading_pairs
+                ]
+
                 # Only when all tasks is successful would the event notifier be resetted
                 responses: List[bool] = await safe_gather(*tasks)
                 if all(responses):
@@ -940,9 +945,8 @@ class BinancePerpetualDerivative(ExchangeBase, PerpetualTrading):
                     amount=amount,
                     leverage=leverage
                 )
-            else:
-                if pos_key in self._account_positions:
-                    del self._account_positions[pos_key]
+            elif pos_key in self._account_positions:
+                del self._account_positions[pos_key]
 
     async def _update_order_fills_from_trades(self):
         last_tick = int(self._last_poll_timestamp / self.UPDATE_ORDER_STATUS_MIN_INTERVAL)
@@ -1290,16 +1294,16 @@ class BinancePerpetualDerivative(ExchangeBase, PerpetualTrading):
                             limit_id: Optional[str] = None):
 
         rest_assistant = await self._get_rest_assistant()
-        async with self._throttler.execute_task(limit_id=limit_id if limit_id else path):
+        async with self._throttler.execute_task(limit_id=limit_id or path):
             try:
                 if add_timestamp:
                     if method == RESTMethod.POST:
                         data = data or {}
-                        data["recvWindow"] = f"{20000}"
+                        data["recvWindow"] = '20000'
                         data["timestamp"] = str(int(self._binance_time_synchronizer.time()) * 1000)
                     else:
                         params = params or {}
-                        params["recvWindow"] = f"{20000}"
+                        params["recvWindow"] = '20000'
                         params["timestamp"] = str(int(self._binance_time_synchronizer.time()) * 1000)
 
                 url = utils.rest_url(path, self._domain, api_version)
@@ -1310,8 +1314,9 @@ class BinancePerpetualDerivative(ExchangeBase, PerpetualTrading):
                     params=params,
                     data=data,
                     is_auth_required=is_auth_required,
-                    throttler_limit_id=limit_id if limit_id else path
+                    throttler_limit_id=limit_id or path,
                 )
+
                 response = await rest_assistant.call(request=request)
 
                 if response.status != 200:

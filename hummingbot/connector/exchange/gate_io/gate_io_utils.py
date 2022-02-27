@@ -33,8 +33,7 @@ class GateIORESTRequest(EndpointRESTRequest):
     def auth_url(self) -> str:
         if self.endpoint is None:
             raise ValueError("No endpoint specified. Cannot build auth url.")
-        auth_url = f"{CONSTANTS.REST_URL_AUTH}/{self.endpoint}"
-        return auth_url
+        return f"{CONSTANTS.REST_URL_AUTH}/{self.endpoint}"
 
 
 class GateIoAPIError(IOError):
@@ -51,8 +50,7 @@ class GateIoAPIError(IOError):
 
 
 def build_gate_io_api_factory() -> WebAssistantsFactory:
-    api_factory = WebAssistantsFactory()
-    return api_factory
+    return WebAssistantsFactory()
 
 
 def split_trading_pair(trading_pair: str) -> Optional[Tuple[str, str]]:

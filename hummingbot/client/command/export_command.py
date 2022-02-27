@@ -58,7 +58,7 @@ class ExportCommand:
             self._notify("Value is required.")
             return await self.prompt_new_export_file_name(path)
         if "." not in input:
-            input = input + ".csv"
+            input = f'{input}.csv'
         file_path = os.path.join(path, input)
         if os.path.exists(file_path):
             self._notify(f"{input} file already exists, please enter a new name.")
@@ -72,7 +72,7 @@ class ExportCommand:
             trades: List[TradeFill] = self._get_trades_from_session(
                 int(self.init_time * 1e3),
                 session=session)
-            if len(trades) == 0:
+            if not trades:
                 self._notify("No past trades to export.")
                 return
             self.placeholder_mode = True

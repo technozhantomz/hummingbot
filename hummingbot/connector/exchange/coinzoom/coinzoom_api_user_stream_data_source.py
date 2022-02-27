@@ -67,7 +67,7 @@ class CoinzoomAPIUserStreamDataSource(UserStreamTrackerDataSource):
 
                 msg_keys = list(msg.keys()) if msg is not None else []
 
-                if not any(ws_method in msg_keys for ws_method in event_methods):
+                if all(ws_method not in msg_keys for ws_method in event_methods):
                     continue
                 yield msg
         except Exception as e:

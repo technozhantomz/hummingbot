@@ -43,13 +43,11 @@ class AscendExAPIUserStreamDataSource(UserStreamTrackerDataSource):
 
     @classmethod
     def _get_session_instance(cls) -> aiohttp.ClientSession:
-        session = aiohttp.ClientSession()
-        return session
+        return aiohttp.ClientSession()
 
     @classmethod
     def _get_throttler_instance(cls) -> AsyncThrottler:
-        throttler = AsyncThrottler(CONSTANTS.RATE_LIMITS)
-        return throttler
+        return AsyncThrottler(CONSTANTS.RATE_LIMITS)
 
     @property
     def last_recv_time(self) -> float:

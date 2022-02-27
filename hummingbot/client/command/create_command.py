@@ -57,10 +57,7 @@ class CreateCommand:
                      f"while setting up these below configuration.")
         # assign default values and reset those not required
         for config in config_map.values():
-            if config.required:
-                config.value = config.default
-            else:
-                config.value = None
+            config.value = config.default if config.required else None
         for config in config_map.values():
             if config.prompt_on_new and config.required:
                 if not self.app.to_stop_config:

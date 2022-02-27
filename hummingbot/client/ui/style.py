@@ -48,48 +48,52 @@ def load_style(config_map=global_config_map):
         color_error_label = hex_to_ansi(color_error_label)
 
         # Apply custom configuration
-        style["output-field"] = "bg:" + color_output_pane + " " + color_terminal_primary
-        style["input-field"] = "bg:" + color_input_pane + " " + style["input-field"].split(' ')[-1]
-        style["log-field"] = "bg:" + color_logs_pane + " " + style["log-field"].split(' ')[-1]
-        style["tab_button.focused"] = "bg:" + color_terminal_primary + " " + color_logs_pane
+        style["output-field"] = f"bg:{color_output_pane} {color_terminal_primary}"
+        style["input-field"] = (
+            f"bg:{color_input_pane} " + style["input-field"].split(' ')[-1]
+        )
+
+        style["log-field"] = (
+            f"bg:{color_logs_pane} " + style["log-field"].split(' ')[-1]
+        )
+
+        style["tab_button.focused"] = f"bg:{color_terminal_primary} {color_logs_pane}"
         style["tab_button"] = style["tab_button"].split(' ')[0] + " " + color_logs_pane
-        style["header"] = "bg:" + color_top_pane + " " + style["header"].split(' ')[-1]
-        style["footer"] = "bg:" + color_bottom_pane + " " + style["footer"].split(' ')[-1]
+        style["header"] = f"bg:{color_top_pane} " + style["header"].split(' ')[-1]
+        style["footer"] = f"bg:{color_bottom_pane} " + style["footer"].split(' ')[-1]
         style["primary"] = color_terminal_primary
         style["search"] = color_terminal_primary
         style["search.current"] = color_terminal_primary
-
-        style["primary-label"] = "bg:" + color_primary_label + " " + color_output_pane
-        style["secondary-label"] = "bg:" + color_secondary_label + " " + color_output_pane
-        style["success-label"] = "bg:" + color_success_label + " " + color_output_pane
-        style["warning-label"] = "bg:" + color_warning_label + " " + color_output_pane
-        style["info-label"] = "bg:" + color_info_label + " " + color_output_pane
-        style["error-label"] = "bg:" + color_error_label + " " + color_output_pane
-
-        return Style.from_dict(style)
 
     else:
         # Load default style
         style = default_ui_style
 
         # Apply custom configuration
-        style["output-field"] = "bg:" + color_output_pane + " " + color_terminal_primary
-        style["input-field"] = "bg:" + color_input_pane + " " + style["input-field"].split(' ')[-1]
-        style["log-field"] = "bg:" + color_logs_pane + " " + style["log-field"].split(' ')[-1]
-        style["header"] = "bg:" + color_top_pane + " " + style["header"].split(' ')[-1]
-        style["footer"] = "bg:" + color_bottom_pane + " " + style["footer"].split(' ')[-1]
+        style["output-field"] = f"bg:{color_output_pane} {color_terminal_primary}"
+        style["input-field"] = (
+            f"bg:{color_input_pane} " + style["input-field"].split(' ')[-1]
+        )
+
+        style["log-field"] = (
+            f"bg:{color_logs_pane} " + style["log-field"].split(' ')[-1]
+        )
+
+        style["header"] = f"bg:{color_top_pane} " + style["header"].split(' ')[-1]
+        style["footer"] = f"bg:{color_bottom_pane} " + style["footer"].split(' ')[-1]
         style["primary"] = color_terminal_primary
-        style["tab_button.focused"] = "bg:" + color_terminal_primary + " " + color_logs_pane
+        style["tab_button.focused"] = f"bg:{color_terminal_primary} {color_logs_pane}"
         style["tab_button"] = style["tab_button"].split(' ')[0] + " " + color_logs_pane
 
-        style["primary-label"] = "bg:" + color_primary_label + " " + color_output_pane
-        style["secondary-label"] = "bg:" + color_secondary_label + " " + color_output_pane
-        style["success-label"] = "bg:" + color_success_label + " " + color_output_pane
-        style["warning-label"] = "bg:" + color_warning_label + " " + color_output_pane
-        style["info-label"] = "bg:" + color_info_label + " " + color_output_pane
-        style["error-label"] = "bg:" + color_error_label + " " + color_output_pane
 
-        return Style.from_dict(style)
+    style["primary-label"] = f"bg:{color_primary_label} {color_output_pane}"
+    style["secondary-label"] = f"bg:{color_secondary_label} {color_output_pane}"
+    style["success-label"] = f"bg:{color_success_label} {color_output_pane}"
+    style["warning-label"] = f"bg:{color_warning_label} {color_output_pane}"
+    style["info-label"] = f"bg:{color_info_label} {color_output_pane}"
+    style["error-label"] = f"bg:{color_error_label} {color_output_pane}"
+
+    return Style.from_dict(style)
 
 
 def reset_style(config_map=global_config_map, save=True):
@@ -132,14 +136,14 @@ def hex_to_ansi(color_hex):
     color_hex = color_hex.replace('#', '')
 
     # Calculate distance, choose the closest ANSI color
-    hex_r = int(color_hex[0:2], 16)
+    hex_r = int(color_hex[:2], 16)
     hex_g = int(color_hex[2:4], 16)
     hex_b = int(color_hex[4:6], 16)
 
     distance_min = None
 
-    for ansi_hex in ansi_palette:
-        ansi_r = int(ansi_hex[0:2], 16)
+    for ansi_hex, color_ansi in ansi_palette.items():
+        ansi_r = int(ansi_hex[:2], 16)
         ansi_g = int(ansi_hex[2:4], 16)
         ansi_b = int(ansi_hex[4:6], 16)
 
@@ -147,9 +151,7 @@ def hex_to_ansi(color_hex):
 
         if distance_min is None or distance < distance_min:
             distance_min = distance
-            color_ansi = ansi_palette[ansi_hex]
-
-    return "#" + color_ansi
+    return f"#{color_ansi}"
 
 
 text_ui_style = {

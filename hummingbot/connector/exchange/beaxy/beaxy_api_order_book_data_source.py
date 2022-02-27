@@ -67,9 +67,9 @@ class BeaxyAPIOrderBookDataSource(OrderBookTrackerDataSource):
     @staticmethod
     async def exchange_symbol_associated_to_pair(trading_pair: str) -> str:
         symbol_map = await BeaxyAPIOrderBookDataSource.trading_pair_symbol_map()
-        symbols = [symbol for symbol, pair in symbol_map.items() if pair == trading_pair]
-
-        if symbols:
+        if symbols := [
+            symbol for symbol, pair in symbol_map.items() if pair == trading_pair
+        ]:
             symbol = symbols[0]
         else:
             raise ValueError(f"There is no symbol mapping for trading pair {trading_pair}")
@@ -114,7 +114,7 @@ class BeaxyAPIOrderBookDataSource(OrderBookTrackerDataSource):
 
     @staticmethod
     async def get_snapshot(client: aiohttp.ClientSession, trading_pair: str, depth: int = 20) -> Dict[str, Any]:
-        assert depth in [5, 10, 20]
+        assert depth in {5, 10, 20}
 
         symbol = await BeaxyAPIOrderBookDataSource.exchange_symbol_associated_to_pair(trading_pair)
 
@@ -247,7 +247,7 @@ class BeaxyAPIOrderBookDataSource(OrderBookTrackerDataSource):
             try:
                 trading_pairs = [await self.exchange_symbol_associated_to_pair(p) for p in self._trading_pairs]
 
-                ws_path: str = '/'.join([trading_pair for trading_pair in trading_pairs])
+                ws_path: str = '/'.join(list(trading_pairs))
                 stream_url: str = f'{BeaxyConstants.PublicApi.WS_BASE_URL}/trades/{ws_path}'
 
                 async with websockets.connect(stream_url) as ws:

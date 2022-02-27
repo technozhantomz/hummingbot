@@ -60,7 +60,7 @@ class CoinbaseProAPIOrderBookDataSource(OrderBookTrackerDataSource):
     async def get_last_traded_prices(cls, trading_pairs: List[str]) -> Dict[str, Decimal]:
         tasks = [cls.get_last_traded_price(t_pair) for t_pair in trading_pairs]
         results = await safe_gather(*tasks)
-        return {t_pair: result for t_pair, result in zip(trading_pairs, results)}
+        return dict(zip(trading_pairs, results))
 
     @classmethod
     async def get_last_traded_price(cls, trading_pair: str) -> Decimal:
@@ -83,9 +83,7 @@ class CoinbaseProAPIOrderBookDataSource(OrderBookTrackerDataSource):
             if response.status == 200:
                 markets = await response.json()
                 raw_trading_pairs: List[str] = list(map(lambda details: details.get('id'), markets))
-                trading_pair_list: List[str] = []
-                for raw_trading_pair in raw_trading_pairs:
-                    trading_pair_list.append(raw_trading_pair)
+                trading_pair_list: List[str] = list(raw_trading_pairs)
         except Exception:
             # Do nothing if the request fails -- there will be no autocomplete for coinbase trading pairs
             pass
@@ -176,8 +174,7 @@ class CoinbaseProAPIOrderBookDataSource(OrderBookTrackerDataSource):
         # Terminate the recv() loop as soon as the next message timed out, so the outer loop can reconnect.
         try:
             async for response in ws.iter_messages():
-                msg = response.data
-                yield msg
+                yield response.data
         except asyncio.TimeoutError:
             self.logger().warning("WebSocket ping timed out. Going to reconnect...")
         finally:
@@ -212,13 +209,13 @@ class CoinbaseProAPIOrderBookDataSource(OrderBookTrackerDataSource):
                         raise ValueError(f"Coinbase Pro Websocket message does not contain a type - {msg}")
                     elif msg_type == "error":
                         raise ValueError(f"Coinbase Pro Websocket received error message - {msg['message']}")
-                    elif msg_type in ["open", "match", "change", "done"]:
+                    elif msg_type in {"open", "match", "change", "done"}:
                         if msg_type == "done" and "price" not in msg:
                             # done messages with no price are completed market orders which can be ignored
                             continue
                         order_book_message: OrderBookMessage = CoinbaseProOrderBook.diff_message_from_exchange(msg)
                         output.put_nowait(order_book_message)
-                    elif msg_type in ["received", "activate", "subscriptions"]:
+                    elif msg_type in {"received", "activate", "subscriptions"}:
                         # these messages are not needed to track the order book
                         continue
                     else:

@@ -15,21 +15,19 @@ class BlocktaneAuth:
         nonce = self.make_nonce()
         signature = self.auth_sig(nonce)
 
-        payload = {
+        return {
             "X-Auth-Apikey": self.api_key,
             "X-Auth-Nonce": nonce,
             "X-Auth-Signature": signature,
             "Content-Type": "application/json"
         }
-        return payload
 
     def make_nonce(self) -> str:
         return str(round(time.time() * 1000))
 
     def auth_sig(self, nonce: str) -> str:
-        sig = hmac.new(
+        return hmac.new(
             self.secret_key.encode('utf8'),
             '{}{}'.format(nonce, self.api_key).encode('utf8'),
             hashlib.sha256
         ).hexdigest()
-        return sig

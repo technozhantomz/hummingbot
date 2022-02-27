@@ -81,11 +81,12 @@ class DydxPerpetualAPIOrderBookDataSource(OrderBookTrackerDataSource):
             response = await rest_assistant.call(request=request)
             if response.status == 200:
                 all_trading_pairs: Dict[str, Any] = await response.json()
-                valid_trading_pairs: list = []
-                for key, val in all_trading_pairs["markets"].items():
-                    if val["status"] == "ONLINE":
-                        valid_trading_pairs.append(key)
-                return valid_trading_pairs
+                return [
+                    key
+                    for key, val in all_trading_pairs["markets"].items()
+                    if val["status"] == "ONLINE"
+                ]
+
         except Exception:
             # Do nothing if the request fails -- there will be no autocomplete for dydx trading pairs
             pass
@@ -198,15 +199,17 @@ class DydxPerpetualAPIOrderBookDataSource(OrderBookTrackerDataSource):
         while True:
             try:
                 msg = await msg_queue.get()
-                if "contents" in msg:
-                    if "trades" in msg["contents"]:
-                        if msg["type"] == "channel_data":
-                            for data in msg["contents"]["trades"]:
-                                msg["ts"] = time.time()
-                                trade_msg: OrderBookMessage = DydxPerpetualOrderBook.trade_message_from_exchange(
-                                    data, msg
-                                )
-                                output.put_nowait(trade_msg)
+                if (
+                    "contents" in msg
+                    and "trades" in msg["contents"]
+                    and msg["type"] == "channel_data"
+                ):
+                    for data in msg["contents"]["trades"]:
+                        msg["ts"] = time.time()
+                        trade_msg: OrderBookMessage = DydxPerpetualOrderBook.trade_message_from_exchange(
+                            data, msg
+                        )
+                        output.put_nowait(trade_msg)
             except asyncio.CancelledError:
                 raise
             except Exception:

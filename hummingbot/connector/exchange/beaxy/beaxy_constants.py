@@ -2,6 +2,7 @@
 
 
 class BeaxyConstants:
+
     class UserStream:
         ORDER_MESSAGE = 'ORDER'
         BALANCE_MESSAGE = 'BALANCE'
@@ -22,11 +23,13 @@ class BeaxyConstants:
         WS_ORDERS_ENDPOINT = WS_BASE_URL + '/ws/v2/orders?access_token={access_token}'
         WS_BALANCE_ENDPOINT = WS_BASE_URL + '/ws/v2/wallets?access_token={access_token}'
 
+
+
     class PublicApi:
         BASE_URL = 'https://services.beaxy.com'
-        SYMBOLS_URL = BASE_URL + '/api/v2/symbols'
+        SYMBOLS_URL = f'{BASE_URL}/api/v2/symbols'
         RATE_URL = BASE_URL + '/api/v2/symbols/{symbol}/rate'
-        RATES_URL = BASE_URL + '/api/v2/symbols/rates'
+        RATES_URL = f'{BASE_URL}/api/v2/symbols/rates'
         ORDER_BOOK_URL = BASE_URL + '/api/v2/symbols/{symbol}/book?depth={depth}'
 
         WS_BASE_URL = 'wss://services.beaxy.com/ws/v2'

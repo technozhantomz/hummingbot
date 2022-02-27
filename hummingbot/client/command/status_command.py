@@ -37,16 +37,17 @@ class StatusCommand:
 
     def _format_application_warnings(self,  # type: HummingbotApplication
                                      ) -> str:
-        lines: List[str] = []
         if len(self._app_warnings) < 1:
             return ""
 
-        lines.append("\n  Warnings:")
-
+        lines: List[str] = ["\n  Warnings:"]
         if len(self._app_warnings) < self.APP_WARNING_STATUS_LIMIT:
-            for app_warning in reversed(self._app_warnings):
-                lines.append(f"    * {pd.Timestamp(app_warning.timestamp, unit='s')} - "
-                             f"({app_warning.logger_name}) - {app_warning.warning_msg}")
+            lines.extend(
+                f"    * {pd.Timestamp(app_warning.timestamp, unit='s')} - "
+                f"({app_warning.logger_name}) - {app_warning.warning_msg}"
+                for app_warning in reversed(self._app_warnings)
+            )
+
         else:
             module_based_warnings: OrderedDict = OrderedDict()
             for app_warning in reversed(self._app_warnings):
@@ -72,8 +73,12 @@ class StatusCommand:
     async def strategy_status(self, live: bool = False):
         active_paper_exchanges = [exchange for exchange in self.markets.keys() if exchange.endswith("paper_trade")]
 
-        paper_trade = "\n  Paper Trading Active: All orders are simulated, and no real orders are placed." if len(active_paper_exchanges) > 0 \
+        paper_trade = (
+            "\n  Paper Trading Active: All orders are simulated, and no real orders are placed."
+            if active_paper_exchanges
             else ""
+        )
+
         app_warning = self.application_warning()
         app_warning = "" if app_warning is None else app_warning
         if inspect.iscoroutinefunction(self.strategy.format_status):
@@ -81,7 +86,7 @@ class StatusCommand:
         else:
             st_status = self.strategy.format_status()
         status = paper_trade + "\n" + st_status + "\n" + app_warning
-        if self._script_iterator is not None and live is False:
+        if self._script_iterator is not None and not live:
             self._script_iterator.request_status()
         return status
 
@@ -99,7 +104,10 @@ class StatusCommand:
             err_msg = await self.validate_n_connect_celo(True)
             if err_msg is not None:
                 invalid_conns["celo"] = err_msg
-        if not any([str(exchange).endswith("paper_trade") for exchange in required_exchanges]):
+        if not any(
+            str(exchange).endswith("paper_trade")
+            for exchange in required_exchanges
+        ):
             await self.update_all_secure_configs()
             connections = await UserBalances.instance().update_exchanges(exchanges=required_exchanges)
             invalid_conns.update({ex: err_msg for ex, err_msg in connections.items()
@@ -127,9 +135,9 @@ class StatusCommand:
             if live:
                 await self.stop_live_update()
                 self.app.live_updates = True
+                script_status = '\n Status from script would not appear here. ' \
+                                'Simply run the status command without "--live" to see script status.'
                 while self.app.live_updates and self.strategy:
-                    script_status = '\n Status from script would not appear here. ' \
-                                    'Simply run the status command without "--live" to see script status.'
                     await self.cls_display_delay(
                         await self.strategy_status(live=True) + script_status + "\n\n Press escape key to stop update.", 1
                     )
@@ -172,12 +180,11 @@ class StatusCommand:
         if invalid_conns or missing_configs:
             return False
 
-        loading_markets: List[ConnectorBase] = []
-        for market in self.markets.values():
-            if not market.ready:
-                loading_markets.append(market)
+        loading_markets: List[ConnectorBase] = [
+            market for market in self.markets.values() if not market.ready
+        ]
 
-        if len(loading_markets) > 0:
+        if loading_markets:
             self._notify("  - Connectors check:  Waiting for connectors " +
                          ",".join([m.name.capitalize() for m in loading_markets]) + " to get ready for trading. \n"
                          "                    Please keep the bot running and try to start again in a few minutes. \n")
@@ -185,13 +192,28 @@ class StatusCommand:
             for market in loading_markets:
                 market_status_df = pd.DataFrame(data=market.status_dict.items(), columns=["description", "status"])
                 self._notify(
-                    f"  - {market.display_name.capitalize()} connector status:\n" +
-                    "\n".join(["     " + line for line in market_status_df.to_string(index=False,).split("\n")]) +
-                    "\n"
+                    (
+                        (
+                            f"  - {market.display_name.capitalize()} connector status:\n"
+                            + "\n".join(
+                                [
+                                    f"     {line}"
+                                    for line in market_status_df.to_string(
+                                        index=False,
+                                    ).split("\n")
+                                ]
+                            )
+                        )
+                        + "\n"
+                    )
                 )
+
             return False
 
-        elif not all([market.network_status is NetworkStatus.CONNECTED for market in self.markets.values()]):
+        elif any(
+            market.network_status is not NetworkStatus.CONNECTED
+            for market in self.markets.values()
+        ):
             offline_markets: List[str] = [
                 market_name
                 for market_name, market

@@ -40,9 +40,7 @@ class DydxPerpetualUserStreamDataSource(UserStreamTrackerDataSource):
 
     @property
     def last_recv_time(self):
-        if self._ws_assistant:
-            return self._ws_assistant.last_recv_time
-        return -1
+        return self._ws_assistant.last_recv_time if self._ws_assistant else -1
 
     async def _get_ws_assistant(self) -> WSAssistant:
         if self._ws_assistant is None:

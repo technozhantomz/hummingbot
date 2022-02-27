@@ -602,19 +602,18 @@ class HitbtcExchange(ExchangeBase):
                 client_order_id = tracked_order.client_order_id
                 if isinstance(response, HitbtcAPIError):
                     err = response.error_payload.get('error', response.error_payload)
-                    if err.get('code') == 20002:
-                        self._order_not_found_records[client_order_id] = \
-                            self._order_not_found_records.get(client_order_id, 0) + 1
-                        if self._order_not_found_records[client_order_id] < self.ORDER_NOT_EXIST_CONFIRMATION_COUNT:
-                            # Wait until the order not found error have repeated a few times before actually treating
-                            # it as failed. See: https://github.com/CoinAlpha/hummingbot/issues/601
-                            continue
-                        self.trigger_event(MarketEvent.OrderFailure,
-                                           MarketOrderFailureEvent(
-                                               self.current_timestamp, client_order_id, tracked_order.order_type))
-                        self.stop_tracking_order(client_order_id)
-                    else:
+                    if err.get('code') != 20002:
                         continue
+                    self._order_not_found_records[client_order_id] = \
+                        self._order_not_found_records.get(client_order_id, 0) + 1
+                    if self._order_not_found_records[client_order_id] < self.ORDER_NOT_EXIST_CONFIRMATION_COUNT:
+                        # Wait until the order not found error have repeated a few times before actually treating
+                        # it as failed. See: https://github.com/CoinAlpha/hummingbot/issues/601
+                        continue
+                    self.trigger_event(MarketEvent.OrderFailure,
+                                       MarketOrderFailureEvent(
+                                           self.current_timestamp, client_order_id, tracked_order.order_type))
+                    self.stop_tracking_order(client_order_id)
                 elif "clientOrderId" not in response:
                     self.logger().info(f"_update_order_status clientOrderId not in resp: {response}")
                     continue
@@ -766,7 +765,7 @@ class HitbtcExchange(ExchangeBase):
         if self._trading_pairs is None:
             raise Exception("cancel_all can only be used when trading_pairs are specified.")
         open_orders = [o for o in self._in_flight_orders.values() if not o.is_done]
-        if len(open_orders) == 0:
+        if not open_orders:
             return []
         tasks = [self._execute_cancel(o.trading_pair, o.client_order_id) for o in open_orders]
         cancellation_results = []
@@ -792,9 +791,8 @@ class HitbtcExchange(ExchangeBase):
                          else Constants.LONG_POLL_INTERVAL)
         last_tick = int(self._last_timestamp / poll_interval)
         current_tick = int(timestamp / poll_interval)
-        if current_tick > last_tick:
-            if not self._poll_notifier.is_set():
-                self._poll_notifier.set()
+        if current_tick > last_tick and not self._poll_notifier.is_set():
+            self._poll_notifier.set()
         self._last_timestamp = timestamp
 
     def get_fee(self,
@@ -878,9 +876,10 @@ class HitbtcExchange(ExchangeBase):
                     executed_amount=Decimal(str(order["cumQuantity"])),
                     status=order["status"],
                     order_type=OrderType.LIMIT,
-                    is_buy=True if order["side"].lower() == TradeType.BUY.name.lower() else False,
+                    is_buy=order["side"].lower() == TradeType.BUY.name.lower(),
                     time=str_date_to_ts(order["createdAt"]),
-                    exchange_order_id=order["id"]
+                    exchange_order_id=order["id"],
                 )
             )
+
         return ret_val

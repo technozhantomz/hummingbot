@@ -69,7 +69,7 @@ class FtxAPIOrderBookDataSource(OrderBookTrackerDataSource):
         resp = requests.get(url=f"{FTX_REST_URL}{FTX_EXCHANGE_INFO_PATH}/{convert_to_exchange_trading_pair(trading_pair)}")
         record = resp.json()["result"]
         result = (Decimal(record.get("bid", "0")) + Decimal(record.get("ask", "0"))) / Decimal("2")
-        return result if result else None
+        return result or None
 
     @staticmethod
     async def fetch_trading_pairs() -> List[str]:
@@ -78,10 +78,12 @@ class FtxAPIOrderBookDataSource(OrderBookTrackerDataSource):
                 async with client.get(f"{FTX_REST_URL}{FTX_EXCHANGE_INFO_PATH}", timeout=API_CALL_TIMEOUT) as response:
                     if response.status == 200:
                         all_trading_pairs: Dict[str, Any] = await response.json()
-                        valid_trading_pairs: list = []
-                        for item in all_trading_pairs["result"]:
-                            if item["type"] == "spot":
-                                valid_trading_pairs.append(item["name"])
+                        valid_trading_pairs: list = [
+                            item["name"]
+                            for item in all_trading_pairs["result"]
+                            if item["type"] == "spot"
+                        ]
+
                         trading_pair_list: List[str] = []
                         for raw_trading_pair in valid_trading_pairs:
                             converted_trading_pair: Optional[str] = \
@@ -100,9 +102,7 @@ class FtxAPIOrderBookDataSource(OrderBookTrackerDataSource):
             if response.status != 200:
                 raise IOError(f"Error fetching FTX market snapshot for {trading_pair}. "
                               f"HTTP status is {response.status}.")
-            data: Dict[str, Any] = simplejson.loads(await response.text(), parse_float=Decimal)
-
-            return data
+            return simplejson.loads(await response.text(), parse_float=Decimal)
 
     async def get_new_order_book(self, trading_pair: str) -> OrderBook:
         async with aiohttp.ClientSession() as client:
@@ -150,11 +150,14 @@ class FtxAPIOrderBookDataSource(OrderBookTrackerDataSource):
                         await ws.send(ujson.dumps(subscribe_request))
                     async for raw_msg in self._inner_messages(ws):
                         msg = simplejson.loads(raw_msg, parse_float=Decimal)
-                        if "channel" in msg:
-                            if msg["channel"] == "trades" and msg["type"] == "update":
-                                for trade in msg["data"]:
-                                    trade_msg: OrderBookMessage = FtxOrderBook.trade_message_from_exchange(msg, trade)
-                                    output.put_nowait(trade_msg)
+                        if (
+                            "channel" in msg
+                            and msg["channel"] == "trades"
+                            and msg["type"] == "update"
+                        ):
+                            for trade in msg["data"]:
+                                trade_msg: OrderBookMessage = FtxOrderBook.trade_message_from_exchange(msg, trade)
+                                output.put_nowait(trade_msg)
             except asyncio.CancelledError:
                 raise
             except Exception:
@@ -176,10 +179,13 @@ class FtxAPIOrderBookDataSource(OrderBookTrackerDataSource):
                         await ws.send(ujson.dumps(subscribe_request))
                     async for raw_msg in self._inner_messages(ws):
                         msg = simplejson.loads(raw_msg, parse_float=Decimal)
-                        if "channel" in msg:
-                            if msg["channel"] == "orderbook" and msg["type"] == "update":
-                                order_book_message: OrderBookMessage = FtxOrderBook.diff_message_from_exchange(msg, msg["data"]["time"])
-                                output.put_nowait(order_book_message)
+                        if (
+                            "channel" in msg
+                            and msg["channel"] == "orderbook"
+                            and msg["type"] == "update"
+                        ):
+                            order_book_message: OrderBookMessage = FtxOrderBook.diff_message_from_exchange(msg, msg["data"]["time"])
+                            output.put_nowait(order_book_message)
             except asyncio.CancelledError:
                 raise
             except Exception:
@@ -201,10 +207,13 @@ class FtxAPIOrderBookDataSource(OrderBookTrackerDataSource):
                         await ws.send(ujson.dumps(subscribe_request))
                     async for raw_msg in self._inner_messages(ws):
                         msg = simplejson.loads(raw_msg, parse_float=Decimal)
-                        if "channel" in msg:
-                            if msg["channel"] == "orderbook" and msg["type"] == "partial":
-                                order_book_message: OrderBookMessage = FtxOrderBook.snapshot_message_from_exchange(msg, msg["data"]["time"])
-                                output.put_nowait(order_book_message)
+                        if (
+                            "channel" in msg
+                            and msg["channel"] == "orderbook"
+                            and msg["type"] == "partial"
+                        ):
+                            order_book_message: OrderBookMessage = FtxOrderBook.snapshot_message_from_exchange(msg, msg["data"]["time"])
+                            output.put_nowait(order_book_message)
             except asyncio.CancelledError:
                 raise
             except Exception:

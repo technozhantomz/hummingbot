@@ -141,10 +141,13 @@ class BybitPerpetualUserStreamDataSource(UserStreamTrackerDataSource):
         """
         tasks_future = None
         try:
-            tasks = []
-            tasks.append(self._listen_for_user_stream_on_url(
-                url=bybit_perpetual_utils.wss_linear_private_url(self._domain),
-                output=output))
+            tasks = [
+                self._listen_for_user_stream_on_url(
+                    url=bybit_perpetual_utils.wss_linear_private_url(self._domain),
+                    output=output,
+                )
+            ]
+
             tasks.append(self._listen_for_user_stream_on_url(
                 url=bybit_perpetual_utils.wss_non_linear_private_url(self._domain),
                 output=output))

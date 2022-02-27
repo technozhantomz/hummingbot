@@ -103,8 +103,12 @@ class BeaxyOrderBookTracker(OrderBookTracker):
         """
         Starts tracking for any new trading pairs, and stop tracking for any inactive trading pairs.
         """
-        tracking_trading_pairs: Set[str] = set([key for key in self._tracking_tasks.keys()
-                                                if not self._tracking_tasks[key].done()])
+        tracking_trading_pairs: Set[str] = {
+            key
+            for key in self._tracking_tasks.keys()
+            if not self._tracking_tasks[key].done()
+        }
+
         available_pairs: Dict[str, BeaxyOrderBookTrackerEntry] = await self.data_source.get_tracking_pairs()
         available_trading_pairs: Set[str] = set(available_pairs.keys())
         new_trading_pairs: Set[str] = available_trading_pairs - tracking_trading_pairs

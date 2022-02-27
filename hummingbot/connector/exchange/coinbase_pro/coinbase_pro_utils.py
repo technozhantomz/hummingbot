@@ -58,5 +58,4 @@ def build_coinbase_pro_web_assistant_factory(
     auth: Optional['CoinbaseProAuth'] = None
 ) -> WebAssistantsFactory:
     """The web-assistant's composition root."""
-    api_factory = WebAssistantsFactory(auth=auth)
-    return api_factory
+    return WebAssistantsFactory(auth=auth)

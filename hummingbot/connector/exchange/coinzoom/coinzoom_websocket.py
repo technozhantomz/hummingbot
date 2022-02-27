@@ -35,7 +35,7 @@ class CoinzoomWebsocket():
                  auth: Optional[CoinzoomAuth] = None):
         self._throttler = throttler
         self._auth: Optional[CoinzoomAuth] = auth
-        self._isPrivate = True if self._auth is not None else False
+        self._isPrivate = self._auth is not None
         self._WS_URL = Constants.WS_PRIVATE_URL if self._isPrivate else Constants.WS_PUBLIC_URL
         self._client: Optional[websockets.WebSocketClientProtocol] = None
         self._is_subscribed = False
@@ -73,9 +73,14 @@ class CoinzoomWebsocket():
                         # Can handle them here if that changes - use `safe_ensure_future`.
 
                         # Check response for a subscribed/unsubscribed message;
-                        result: List[str] = list([d['result']
-                                                 for k, d in msg.items()
-                                                 if (isinstance(d, dict) and d.get('result') is not None)])
+                        result: List[str] = [
+                            d['result']
+                            for k, d in msg.items()
+                            if (
+                                isinstance(d, dict) and d.get('result') is not None
+                            )
+                        ]
+
 
                         if len(result):
                             if result[0] == 'subscribed':

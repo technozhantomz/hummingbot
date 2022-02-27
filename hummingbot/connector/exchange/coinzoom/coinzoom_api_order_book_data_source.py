@@ -48,8 +48,7 @@ class CoinzoomAPIOrderBookDataSource(OrderBookTrackerDataSource):
 
     @classmethod
     def _get_throttler_instance(cls) -> AsyncThrottler:
-        throttler = AsyncThrottler(Constants.RATE_LIMITS)
-        return throttler
+        return AsyncThrottler(Constants.RATE_LIMITS)
 
     @classmethod
     async def get_last_traded_prices(cls,
@@ -62,7 +61,10 @@ class CoinzoomAPIOrderBookDataSource(OrderBookTrackerDataSource):
                                                                           throttler=throttler)
         for trading_pair in trading_pairs:
             ex_pair: str = convert_to_exchange_trading_pair(trading_pair, True)
-            ticker: Dict[Any] = list([tic for symbol, tic in tickers.items() if symbol == ex_pair])[0]
+            ticker: Dict[Any] = [
+                tic for symbol, tic in tickers.items() if symbol == ex_pair
+            ][0]
+
             results[trading_pair]: Decimal = Decimal(str(ticker["last_price"]))
         return results
 
@@ -74,7 +76,11 @@ class CoinzoomAPIOrderBookDataSource(OrderBookTrackerDataSource):
                 method="GET",
                 endpoint=Constants.ENDPOINT["SYMBOL"],
                 throttler=throttler)
-            trading_pairs: List[str] = list([convert_from_exchange_trading_pair(sym["symbol"]) for sym in symbols])
+            trading_pairs: List[str] = [
+                convert_from_exchange_trading_pair(sym["symbol"])
+                for sym in symbols
+            ]
+
             # Filter out unmatched pairs so nothing breaks
             return [sym for sym in trading_pairs if sym is not None]
         except Exception:
@@ -131,7 +137,7 @@ class CoinzoomAPIOrderBookDataSource(OrderBookTrackerDataSource):
                 async for response in ws.on_message():
                     msg_keys = list(response.keys()) if response is not None else []
 
-                    if not Constants.WS_METHODS["TRADES_UPDATE"] in msg_keys:
+                    if Constants.WS_METHODS["TRADES_UPDATE"] not in msg_keys:
                         continue
 
                     trade: List[Any] = response[Constants.WS_METHODS["TRADES_UPDATE"]]
@@ -144,7 +150,6 @@ class CoinzoomAPIOrderBookDataSource(OrderBookTrackerDataSource):
             except Exception:
                 self.logger().error("Unexpected error.", exc_info=True)
                 raise
-                await asyncio.sleep(5.0)
             finally:
                 await ws.disconnect()
 

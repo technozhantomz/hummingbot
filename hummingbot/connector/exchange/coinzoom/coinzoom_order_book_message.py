@@ -39,9 +39,7 @@ class CoinzoomOrderBookMessage(OrderBookMessage):
 
     @property
     def trade_id(self) -> int:
-        if self.type is OrderBookMessageType.TRADE:
-            return self.timestamp
-        return -1
+        return self.timestamp if self.type is OrderBookMessageType.TRADE else -1
 
     @property
     def trading_pair(self) -> str:
@@ -66,8 +64,7 @@ class CoinzoomOrderBookMessage(OrderBookMessage):
     def __lt__(self, other) -> bool:
         if self.timestamp != other.timestamp:
             return self.timestamp < other.timestamp
-        else:
-            """
+        """
             If timestamp is the same, the ordering is snapshot < diff < trade
             """
-            return self.type.value < other.type.value
+        return self.type.value < other.type.value

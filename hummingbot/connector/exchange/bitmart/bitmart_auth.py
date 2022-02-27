@@ -25,10 +25,15 @@ class BitmartAuth():
         :return: a dictionary of auth headers
         """
 
-        if auth_type == "SIGNED":
+        if auth_type == "KEYED":
+            return {
+                "Content-Type": 'application/json',
+                "X-BM-KEY": self.api_key,
+            }
 
+        elif auth_type == "SIGNED":
             params = json.dumps(params)
-            payload = f'{str(timestamp)}#{self.memo}#{params}'
+            payload = f'{timestamp}#{self.memo}#{params}'
 
             sign = hmac.new(
                 self.secret_key.encode('utf-8'),
@@ -43,12 +48,6 @@ class BitmartAuth():
                 "X-BM-TIMESTAMP": str(timestamp),
             }
 
-        elif auth_type == "KEYED":
-            return {
-                "Content-Type": 'application/json',
-                "X-BM-KEY": self.api_key,
-            }
-
         else:
             return {
                 "Content-Type": 'application/json',
@@ -60,7 +59,7 @@ class BitmartAuth():
         :return: a dictionary of auth headers with api_key, timestamp, signature
         """
 
-        payload = f'{str(timestamp)}#{self.memo}#bitmart.WebSocket'
+        payload = f'{timestamp}#{self.memo}#bitmart.WebSocket'
 
         sign = hmac.new(
             self.secret_key.encode('utf-8'),

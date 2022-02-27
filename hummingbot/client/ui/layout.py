@@ -236,9 +236,13 @@ def generate_layout(input_field: TextArea,
                     trade_monitor: TextArea,
                     command_tabs: Dict[str, CommandTab],
                     ):
-    components = {}
+    components = {
+        "item_top_version": Window(
+            FormattedTextControl(get_version), style="class:header"
+        )
+    }
 
-    components["item_top_version"] = Window(FormattedTextControl(get_version), style="class:header")
+
     components["item_top_active"] = Window(FormattedTextControl(get_active_strategy), style="class:header")
     components["item_top_file"] = Window(FormattedTextControl(get_strategy_file), style="class:header")
     components["item_top_toggle"] = right_pane_toggle
@@ -266,8 +270,9 @@ def generate_layout(input_field: TextArea,
             tab.close_button.window.style = tab.button.window.style
             tab_buttons.append(VSplit([tab.button, tab.close_button]))
     pane_right_field = log_field
-    focused_right_field = [tab.output_field for tab in command_tabs.values() if tab.is_selected]
-    if focused_right_field:
+    if focused_right_field := [
+        tab.output_field for tab in command_tabs.values() if tab.is_selected
+    ]:
         pane_right_field = focused_right_field[0]
     components["pane_right_top"] = VSplit(tab_buttons, height=1, style="class:log-field", padding_char=" ", padding=2)
     components["pane_right"] = ConditionalContainer(

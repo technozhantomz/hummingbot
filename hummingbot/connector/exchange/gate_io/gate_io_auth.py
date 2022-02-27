@@ -52,12 +52,11 @@ class GateIoAuth:
         :return: a dictionary of auth params
         """
         sig = self.generate_payload(payload['channel'], payload['event'], payload['time'], True)
-        headers = {
+        return {
             "method": "api_key",
             "KEY": f"{self.api_key}",
             "SIGN": f"{sig}",
         }
-        return headers
 
     def get_headers(self,
                     method,
@@ -68,11 +67,10 @@ class GateIoAuth:
         :return: a dictionary of auth headers
         """
         payload = self.generate_payload(method, url, params)
-        headers = {
+        return {
             "X-Gate-Channel-Id": CONSTANTS.HBOT_BROKER_ID,
             "KEY": f"{self.api_key}",
             "Timestamp": f"{self.nonce}",
             "SIGN": f"{payload}",
             "Content-Type": "application/json",
         }
-        return headers

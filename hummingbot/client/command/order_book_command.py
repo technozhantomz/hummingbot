@@ -47,7 +47,10 @@ class OrderBookCommand:
             asks = order_book.snapshot[1][['price', 'amount']].head(lines)
             asks.rename(columns={'price': 'ask_price', 'amount': 'ask_volume'}, inplace=True)
             joined_df = pd.concat([bids, asks], axis=1)
-            text_lines = ["    " + line for line in joined_df.to_string(index=False).split("\n")]
+            text_lines = [
+                f"    {line}" for line in joined_df.to_string(index=False).split("\n")
+            ]
+
             header = f"  market: {market_connector.name} {trading_pair}\n"
             return header + "\n".join(text_lines)
 

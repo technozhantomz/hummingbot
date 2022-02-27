@@ -31,10 +31,9 @@ def split_trading_pair(trading_pair: str) -> Optional[Tuple[str, str]]:
         m = RE_4_LETTERS_QUOTE.match(trading_pair)
         if m is None:
             m = RE_3_LETTERS_QUOTE.match(trading_pair)
-            if m is None:
-                m = RE_2_LETTERS_QUOTE.match(trading_pair)
+        if m is None:
+            m = RE_2_LETTERS_QUOTE.match(trading_pair)
         return m.group(1), m.group(2)
-    # Exceptions are now logged as warnings in trading pair fetcher
     except Exception:
         return None
 
@@ -63,8 +62,7 @@ def get_new_client_order_id(trade_type: TradeType, trading_pair: str) -> str:
 
 
 def build_api_factory() -> WebAssistantsFactory:
-    api_factory = WebAssistantsFactory(ws_post_processors=[HuobiWSPostProcessor()])
-    return api_factory
+    return WebAssistantsFactory(ws_post_processors=[HuobiWSPostProcessor()])
 
 
 KEYS = {

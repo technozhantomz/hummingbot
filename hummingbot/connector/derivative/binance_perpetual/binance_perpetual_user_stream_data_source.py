@@ -38,9 +38,7 @@ class BinancePerpetualUserStreamDataSource(UserStreamTrackerDataSource):
 
     @property
     def last_recv_time(self) -> float:
-        if self._ws_assistant:
-            return self._ws_assistant.last_recv_time
-        return 0
+        return self._ws_assistant.last_recv_time if self._ws_assistant else 0
 
     def __init__(
         self,

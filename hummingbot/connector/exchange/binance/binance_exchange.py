@@ -109,10 +109,7 @@ class BinanceExchange(ExchangeBase):
 
     @property
     def name(self) -> str:
-        if self._domain == "com":
-            return "binance"
-        else:
-            return f"binance_{self._domain}"
+        return "binance" if self._domain == "com" else f"binance_{self._domain}"
 
     @property
     def order_books(self) -> Dict[str, OrderBook]:
@@ -255,9 +252,8 @@ class BinanceExchange(ExchangeBase):
         last_tick = int(self._last_timestamp / poll_interval)
         current_tick = int(timestamp / poll_interval)
 
-        if current_tick > last_tick:
-            if not self._poll_notifier.is_set():
-                self._poll_notifier.set()
+        if current_tick > last_tick and not self._poll_notifier.is_set():
+            self._poll_notifier.set()
         self._last_timestamp = timestamp
 
     def get_order_book(self, trading_pair: str) -> OrderBook:
@@ -426,7 +422,7 @@ class BinanceExchange(ExchangeBase):
         """
         incomplete_orders = [o for o in self.in_flight_orders.values() if not o.is_done]
         tasks = [self._execute_cancel(o.trading_pair, o.client_order_id) for o in incomplete_orders]
-        order_id_set = set([o.client_order_id for o in incomplete_orders])
+        order_id_set = {o.client_order_id for o in incomplete_orders}
         successful_cancellations = []
 
         try:
@@ -778,9 +774,10 @@ class BinanceExchange(ExchangeBase):
                 or (self.in_flight_orders and small_interval_current_tick > small_interval_last_tick)):
             query_time = int(self._last_trades_poll_binance_timestamp * 1e3)
             self._last_trades_poll_binance_timestamp = self._binance_time_synchronizer.time()
-            order_by_exchange_id_map = {}
-            for order in self._order_tracker.all_orders.values():
-                order_by_exchange_id_map[order.exchange_order_id] = order
+            order_by_exchange_id_map = {
+                order.exchange_order_id: order
+                for order in self._order_tracker.all_orders.values()
+            }
 
             tasks = []
             trading_pairs = self._order_book_tracker._trading_pairs
@@ -865,7 +862,7 @@ class BinanceExchange(ExchangeBase):
         current_tick = self.current_timestamp / self.UPDATE_ORDER_STATUS_MIN_INTERVAL
 
         tracked_orders: List[InFlightOrder] = list(self.in_flight_orders.values())
-        if current_tick > last_tick and len(tracked_orders) > 0:
+        if current_tick > last_tick and tracked_orders:
 
             tasks = [self._api_request(
                      method=RESTMethod.GET,

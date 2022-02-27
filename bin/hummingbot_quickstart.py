@@ -96,9 +96,12 @@ async def quick_start(args):
     if wallet and password:
         global_config_map.get("ethereum_wallet").value = wallet
 
-    if hb.strategy_name and hb.strategy_file_name:
-        if not all_configs_complete(hb.strategy_name):
-            hb.status()
+    if (
+        hb.strategy_name
+        and hb.strategy_file_name
+        and not all_configs_complete(hb.strategy_name)
+    ):
+        hb.status()
 
     with patch_stdout(log_field=hb.app.log_field):
         dev_mode = check_dev_mode()
@@ -135,9 +138,8 @@ def main():
         args.config_password = os.environ["CONFIG_PASSWORD"]
 
     # If no password is given from the command line, prompt for one.
-    if args.config_password is None:
-        if not login_prompt():
-            return
+    if args.config_password is None and not login_prompt():
+        return
 
     asyncio.get_event_loop().run_until_complete(quick_start(args))
 

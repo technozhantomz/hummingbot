@@ -46,7 +46,7 @@ class BalanceCommand:
             file_path = GLOBAL_CONFIG_PATH
             if option == "limit":
                 config_var = config_map["balance_asset_limit"]
-                if args is None or len(args) == 0:
+                if args is None or not args:
                     safe_ensure_future(self.show_asset_limits())
                     return
                 if len(args) != 3 or validate_exchange(args[0]) is not None or validate_decimal(args[2]) is not None:
@@ -68,7 +68,7 @@ class BalanceCommand:
 
             elif option == "paper":
                 config_var = config_map["paper_trade_account_balance"]
-                if args is None or len(args) == 0:
+                if args is None or not args:
                     safe_ensure_future(self.show_paper_account_balance())
                     return
                 if len(args) != 2 or validate_decimal(args[1]) is not None:
@@ -108,7 +108,7 @@ class BalanceCommand:
             if df.empty:
                 self._notify("You have no balance on this exchange.")
             else:
-                lines = ["    " + line for line in df.to_string(index=False).split("\n")]
+                lines = [f"    {line}" for line in df.to_string(index=False).split("\n")]
                 self._notify("\n".join(lines))
                 self._notify(f"\n  Total: {RateOracle.global_token_symbol} {PerformanceMetrics.smart_round(df[total_col_name].sum())}    "
                              f"Allocated: {allocated_total / df[total_col_name].sum():.2%}")
@@ -122,7 +122,7 @@ class BalanceCommand:
                 if not CeloCLI.unlocked:
                     await self.validate_n_connect_celo()
                 df = await self.celo_balances_df()
-                lines = ["    " + line for line in df.to_string(index=False).split("\n")]
+                lines = [f"    {line}" for line in df.to_string(index=False).split("\n")]
                 self._notify("\ncelo:")
                 self._notify("\n".join(lines))
             except Exception as e:
@@ -131,13 +131,13 @@ class BalanceCommand:
         eth_address = global_config_map["ethereum_wallet"].value
         if eth_address is not None:
             eth_df = await self.ethereum_balances_df()
-            lines = ["    " + line for line in eth_df.to_string(index=False).split("\n")]
+            lines = [f"    {line}" for line in eth_df.to_string(index=False).split("\n")]
             self._notify("\nethereum:")
             self._notify("\n".join(lines))
 
             # XDAI balances
             xdai_df = await self.xdai_balances_df()
-            lines = ["    " + line for line in xdai_df.to_string(index=False).split("\n")]
+            lines = [f"    {line}" for line in xdai_df.to_string(index=False).split("\n")]
             self._notify("\nxdai:")
             self._notify("\n".join(lines))
 
@@ -167,10 +167,12 @@ class BalanceCommand:
 
     async def celo_balances_df(self,  # type: HummingbotApplication
                                ):
-        rows = []
         bals = CeloCLI.balances()
-        for token, bal in bals.items():
-            rows.append({"Asset": token.upper(), "Amount": round(bal.total, 4)})
+        rows = [
+            {"Asset": token.upper(), "Amount": round(bal.total, 4)}
+            for token, bal in bals.items()
+        ]
+
         df = pd.DataFrame(data=rows, columns=["Asset", "Amount"])
         df.sort_values(by=["Asset"], inplace=True)
         return df
@@ -180,8 +182,11 @@ class BalanceCommand:
         rows = []
         if ethereum_required_trading_pairs():
             bals = await UserBalances.eth_n_erc20_balances()
-            for token, bal in bals.items():
-                rows.append({"Asset": token, "Amount": round(bal, 4)})
+            rows.extend(
+                {"Asset": token, "Amount": round(bal, 4)}
+                for token, bal in bals.items()
+            )
+
         else:
             eth_bal = UserBalances.ethereum_balance()
             rows.append({"Asset": "ETH", "Amount": round(eth_bal, 4)})
@@ -191,19 +196,22 @@ class BalanceCommand:
 
     async def xdai_balances_df(self,  # type: HummingbotApplication
                                ):
-        rows = []
         bals = await UserBalances.xdai_balances()
-        for token, bal in bals.items():
-            rows.append({"Asset": token, "Amount": round(bal, 4)})
+        rows = [
+            {"Asset": token, "Amount": round(bal, 4)}
+            for token, bal in bals.items()
+        ]
+
         df = pd.DataFrame(data=rows, columns=["Asset", "Amount"])
         df.sort_values(by=["Asset"], inplace=True)
         return df
 
     async def asset_limits_df(self,
                               asset_limit_conf: Dict[str, str]):
-        rows = []
-        for token, amount in asset_limit_conf.items():
-            rows.append({"Asset": token, "Limit": round(Decimal(amount), 4)})
+        rows = [
+            {"Asset": token, "Limit": round(Decimal(amount), 4)}
+            for token, amount in asset_limit_conf.items()
+        ]
 
         df = pd.DataFrame(data=rows, columns=["Asset", "Limit"])
         df.sort_values(by=["Asset"], inplace=True)
@@ -229,15 +237,17 @@ class BalanceCommand:
             if df.empty:
                 self._notify("You have no limits on this exchange.")
             else:
-                lines = ["    " + line for line in df.to_string(index=False).split("\n")]
+                lines = [f"    {line}" for line in df.to_string(index=False).split("\n")]
                 self._notify("\n".join(lines))
         self._notify("\n")
         return
 
     async def paper_acccount_balance_df(self, paper_balances: Dict[str, Decimal]):
-        rows = []
-        for asset, balance in paper_balances.items():
-            rows.append({"Asset": asset, "Balance": round(Decimal(str(balance)), 4)})
+        rows = [
+            {"Asset": asset, "Balance": round(Decimal(str(balance)), 4)}
+            for asset, balance in paper_balances.items()
+        ]
+
         df = pd.DataFrame(data=rows, columns=["Asset", "Balance"])
         df.sort_values(by=["Asset"], inplace=True)
         return df
@@ -260,7 +270,7 @@ class BalanceCommand:
             return
         self._notify("Paper account balances:")
         df = await self.paper_acccount_balance_df(paper_balances)
-        lines = ["    " + line for line in df.to_string(index=False).split("\n")]
+        lines = [f"    {line}" for line in df.to_string(index=False).split("\n")]
         self._notify("\n".join(lines))
         self._notify("\n")
         return

@@ -14,10 +14,8 @@ class BeaxyOrderBookMessage(OrderBookMessage):
         *args,
         **kwargs,
     ):
-        if timestamp is None:
-            if message_type is OrderBookMessageType.SNAPSHOT:
-                raise ValueError('timestamp must not be None when initializing snapshot messages.')
-                timestamp = int(time.time())
+        if timestamp is None and message_type is OrderBookMessageType.SNAPSHOT:
+            raise ValueError('timestamp must not be None when initializing snapshot messages.')
         return super(BeaxyOrderBookMessage, cls).__new__(
             cls, message_type, content, timestamp=timestamp, *args, **kwargs
         )
@@ -60,8 +58,7 @@ class BeaxyOrderBookMessage(OrderBookMessage):
     def __lt__(self, other) -> bool:
         if self.timestamp != other.timestamp:
             return self.timestamp < other.timestamp
-        else:
-            """
+        """
             If timestamp is the same, the ordering is snapshot < diff < trade
             """
-            return self.type.value < other.type.value
+        return self.type.value < other.type.value

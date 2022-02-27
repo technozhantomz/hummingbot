@@ -125,14 +125,22 @@ class BybitPerpetualAPIOrderBookDataSource(OrderBookTrackerDataSource):
     async def get_last_traded_prices(
         cls, trading_pairs: List[str], domain: Optional[str] = None, throttler: Optional[AsyncThrottler] = None
     ) -> Dict[str, float]:
-        if (domain in cls._last_traded_prices
-                and all(trading_pair in cls._last_traded_prices[domain]
-                        for trading_pair
-                        in trading_pairs)):
-            result = {trading_pair: cls._last_traded_prices[domain][trading_pair] for trading_pair in trading_pairs}
-        else:
-            result = await cls._get_last_traded_prices_from_exchange(trading_pairs, domain, throttler)
-        return result
+        return (
+            {
+                trading_pair: cls._last_traded_prices[domain][trading_pair]
+                for trading_pair in trading_pairs
+            }
+            if (
+                domain in cls._last_traded_prices
+                and all(
+                    trading_pair in cls._last_traded_prices[domain]
+                    for trading_pair in trading_pairs
+                )
+            )
+            else await cls._get_last_traded_prices_from_exchange(
+                trading_pairs, domain, throttler
+            )
+        )
 
     @classmethod
     async def _get_last_traded_prices_from_exchange(
@@ -168,9 +176,9 @@ class BybitPerpetualAPIOrderBookDataSource(OrderBookTrackerDataSource):
         :return: Parsed API Response as a Json dictionary
         """
         symbol_map = await self.trading_pair_symbol_map(self._domain)
-        symbols = [symbol for symbol, pair in symbol_map.items() if pair == trading_pair]
-
-        if symbols:
+        if symbols := [
+            symbol for symbol, pair in symbol_map.items() if pair == trading_pair
+        ]:
             symbol = symbols[0]
         else:
             raise ValueError(f"There is no symbol mapping for trading pair {trading_pair}")
@@ -217,9 +225,9 @@ class BybitPerpetualAPIOrderBookDataSource(OrderBookTrackerDataSource):
 
     async def _get_funding_info_from_exchange(self, trading_pair: str) -> FundingInfo:
         symbol_map = await self.trading_pair_symbol_map(self._domain)
-        symbols = [symbol for symbol, pair in symbol_map.items() if trading_pair == pair]
-
-        if symbols:
+        if symbols := [
+            symbol for symbol, pair in symbol_map.items() if trading_pair == pair
+        ]:
             symbol = symbols[0]
         else:
             raise ValueError(f"There is no symbol mapping for trading pair {trading_pair}")
@@ -434,11 +442,11 @@ class BybitPerpetualAPIOrderBookDataSource(OrderBookTrackerDataSource):
                 event_type = instrument_info_message["type"]
 
                 entries = []
-                if event_type == "snapshot":
-                    entries.append(instrument_info_message["data"])
                 if event_type == "delta":
                     entries.extend(instrument_info_message["data"]["update"])
 
+                elif event_type == "snapshot":
+                    entries.append(instrument_info_message["data"])
                 for entry in entries:
                     if "last_price_e4" in entry:
                         self._last_traded_prices[self._domain][trading_pair] = int(entry["last_price_e4"]) * 1e-4
@@ -479,5 +487,4 @@ class BybitPerpetualAPIOrderBookDataSource(OrderBookTrackerDataSource):
     @classmethod
     def _get_throttler_instance(cls, trading_pairs: List[str] = None) -> AsyncThrottler:
         rate_limits = bybit_utils.build_rate_limits(trading_pairs)
-        throttler = AsyncThrottler(rate_limits)
-        return throttler
+        return AsyncThrottler(rate_limits)

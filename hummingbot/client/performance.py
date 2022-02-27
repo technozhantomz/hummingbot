@@ -130,11 +130,8 @@ class PerformanceMetrics:
         :param short: a list containing pairs of open and closed short position orders
         :return: A list containing PnL for each closed positions
         """
-        pnls = []
-        for lg in long:
-            pnls.append((lg[1].price - lg[0].price) * lg[1].amount)
-        for st in short:
-            pnls.append((st[0].price - st[1].price) * st[1].amount)
+        pnls = [(lg[1].price - lg[0].price) * lg[1].amount for lg in long]
+        pnls.extend((st[0].price - st[1].price) * st[1].amount for st in short)
         return pnls
 
     @staticmethod

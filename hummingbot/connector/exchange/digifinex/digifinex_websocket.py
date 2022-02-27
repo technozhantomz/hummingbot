@@ -36,7 +36,7 @@ class DigifinexWebsocket(RequestId):
 
     def __init__(self, auth: Optional[DigifinexAuth] = None):
         self._auth: Optional[DigifinexAuth] = auth
-        self._isPrivate = True if self._auth is not None else False
+        self._isPrivate = self._auth is not None
         self._WS_URL = constants.WSS_PRIVATE_URL if self._isPrivate else constants.WSS_PUBLIC_URL
         self._client: Optional[websockets.WebSocketClientProtocol] = None
 
@@ -149,7 +149,7 @@ class DigifinexWebsocket(RequestId):
 
     # subscribe to a method
     async def subscribe(self, category: str, channels: List[str]) -> int:
-        id = await self.request(category + ".subscribe", channels)
+        id = await self.request(f'{category}.subscribe', channels)
         msg = await self._messages()
         if msg.get('error') is not None:
             raise ConnectionError(f'subscribe {category} {channels} failed: {msg}')

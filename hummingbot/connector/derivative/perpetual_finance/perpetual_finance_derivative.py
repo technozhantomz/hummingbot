@@ -154,11 +154,11 @@ class PerpetualFinanceDerivative(ExchangeBase, PerpetualTrading):
         Retrieves allowances for token in trading_pairs
         :return: A dictionary of token and its allowance (how much PerpetualFinance can spend).
         """
-        ret_val = {}
         resp = await self._api_request("post", "perpfi/allowances")
-        for asset, amount in resp["approvals"].items():
-            ret_val[asset] = Decimal(str(amount))
-        return ret_val
+        return {
+            asset: Decimal(str(amount))
+            for asset, amount in resp["approvals"].items()
+        }
 
     @async_ttl_cache(ttl=5, maxsize=10)
     async def get_quote_price(self, trading_pair: str, is_buy: bool, amount: Decimal) -> Optional[Decimal]:
@@ -261,7 +261,7 @@ class PerpetualFinanceDerivative(ExchangeBase, PerpetualTrading):
                                "minBaseAssetAmount": Decimal("0")})
         else:
             # api_params.update({"minimalQuoteAsset": price * amount})
-            api_params.update({"minimalQuoteAsset": Decimal("0")})
+            api_params["minimalQuoteAsset"] = Decimal("0")
         self.start_tracking_order(order_id, None, trading_pair, trade_type, price, amount, self._leverage[trading_pair], position_action.name)
         try:
             order_result = await self._api_request("post", f"perpfi/{position_action.name.lower()}", api_params)
@@ -332,85 +332,86 @@ class PerpetualFinanceDerivative(ExchangeBase, PerpetualTrading):
         """
         Calls REST API to get status update for each in-flight order.
         """
-        if len(self._in_flight_orders) > 0:
-            tracked_orders = list(self._in_flight_orders.values())
+        if len(self._in_flight_orders) <= 0:
+            return
+        tracked_orders = list(self._in_flight_orders.values())
 
-            tasks = []
-            for tracked_order in tracked_orders:
-                order_id = await tracked_order.get_exchange_order_id()
-                tasks.append(self._api_request("post",
-                                               "perpfi/receipt",
-                                               {"txHash": order_id}))
-            update_results = await safe_gather(*tasks, return_exceptions=True)
-            for update_result, tracked_order in zip(update_results, tracked_orders):
-                self.logger().info(f"Polling for order status updates of {len(tasks)} orders.")
-                if isinstance(update_result, Exception):
-                    raise update_result
-                if "txHash" not in update_result:
-                    self.logger().info(f"_update_order_status txHash not in resp: {update_result}")
-                    continue
-                if update_result["confirmed"] is True:
-                    if update_result["receipt"]["status"] == 1:
-                        fee = build_perpetual_trade_fee(
-                            exchange=self.name,
-                            is_maker=True,
-                            position_action=PositionAction[tracked_order.position],
-                            base_currency=tracked_order.base_asset,
-                            quote_currency=tracked_order.quote_asset,
-                            order_type=tracked_order.order_type,
-                            order_side=tracked_order.trade_type,
-                            amount=tracked_order.amount,
-                            price=tracked_order.price,
+        tasks = []
+        for tracked_order in tracked_orders:
+            order_id = await tracked_order.get_exchange_order_id()
+            tasks.append(self._api_request("post",
+                                           "perpfi/receipt",
+                                           {"txHash": order_id}))
+        update_results = await safe_gather(*tasks, return_exceptions=True)
+        for update_result, tracked_order in zip(update_results, tracked_orders):
+            self.logger().info(f"Polling for order status updates of {len(tasks)} orders.")
+            if isinstance(update_result, Exception):
+                raise update_result
+            if "txHash" not in update_result:
+                self.logger().info(f"_update_order_status txHash not in resp: {update_result}")
+                continue
+            if update_result["confirmed"] is True:
+                if update_result["receipt"]["status"] == 1:
+                    fee = build_perpetual_trade_fee(
+                        exchange=self.name,
+                        is_maker=True,
+                        position_action=PositionAction[tracked_order.position],
+                        base_currency=tracked_order.base_asset,
+                        quote_currency=tracked_order.quote_asset,
+                        order_type=tracked_order.order_type,
+                        order_side=tracked_order.trade_type,
+                        amount=tracked_order.amount,
+                        price=tracked_order.price,
+                    )
+                    fee.flat_fees.append(TokenAmount("XDAI", Decimal(str(update_result["receipt"]["gasUsed"]))))
+                    self.trigger_event(
+                        MarketEvent.OrderFilled,
+                        OrderFilledEvent(
+                            self.current_timestamp,
+                            tracked_order.client_order_id,
+                            tracked_order.trading_pair,
+                            tracked_order.trade_type,
+                            tracked_order.order_type,
+                            Decimal(str(tracked_order.price)),
+                            Decimal(str(tracked_order.amount)),
+                            fee,
+                            exchange_trade_id=order_id,
+                            leverage=self._leverage[tracked_order.trading_pair],
+                            position=tracked_order.position
                         )
-                        fee.flat_fees.append(TokenAmount("XDAI", Decimal(str(update_result["receipt"]["gasUsed"]))))
-                        self.trigger_event(
-                            MarketEvent.OrderFilled,
-                            OrderFilledEvent(
-                                self.current_timestamp,
-                                tracked_order.client_order_id,
-                                tracked_order.trading_pair,
-                                tracked_order.trade_type,
-                                tracked_order.order_type,
-                                Decimal(str(tracked_order.price)),
-                                Decimal(str(tracked_order.amount)),
-                                fee,
-                                exchange_trade_id=order_id,
-                                leverage=self._leverage[tracked_order.trading_pair],
-                                position=tracked_order.position
-                            )
-                        )
-                        tracked_order.last_state = "FILLED"
-                        self.logger().info(f"The {tracked_order.trade_type.name} order "
-                                           f"{tracked_order.client_order_id} has completed "
-                                           f"according to order status API.")
-                        event_tag = MarketEvent.BuyOrderCompleted if tracked_order.trade_type is TradeType.BUY \
-                            else MarketEvent.SellOrderCompleted
-                        event_class = BuyOrderCompletedEvent if tracked_order.trade_type is TradeType.BUY \
-                            else SellOrderCompletedEvent
-                        self.trigger_event(event_tag,
-                                           event_class(self.current_timestamp,
-                                                       tracked_order.client_order_id,
-                                                       tracked_order.base_asset,
-                                                       tracked_order.quote_asset,
-                                                       tracked_order.fee_asset,
-                                                       tracked_order.executed_amount_base,
-                                                       tracked_order.executed_amount_quote,
-                                                       float(fee.fee_amount_in_quote(tracked_order.trading_pair,
-                                                                                     Decimal(str(tracked_order.price)),
-                                                                                     Decimal(str(tracked_order.amount)),
-                                                                                     self)),  # this ignores the gas fee, which is fine for now
-                                                       tracked_order.order_type))
-                        self.stop_tracking_order(tracked_order.client_order_id)
-                    else:
-                        self.logger().info(
-                            f"The market order {tracked_order.client_order_id} has failed according to order status API. ")
-                        self.trigger_event(MarketEvent.OrderFailure,
-                                           MarketOrderFailureEvent(
-                                               self.current_timestamp,
-                                               tracked_order.client_order_id,
-                                               tracked_order.order_type
-                                           ))
-                        self.stop_tracking_order(tracked_order.client_order_id)
+                    )
+                    tracked_order.last_state = "FILLED"
+                    self.logger().info(f"The {tracked_order.trade_type.name} order "
+                                       f"{tracked_order.client_order_id} has completed "
+                                       f"according to order status API.")
+                    event_tag = MarketEvent.BuyOrderCompleted if tracked_order.trade_type is TradeType.BUY \
+                        else MarketEvent.SellOrderCompleted
+                    event_class = BuyOrderCompletedEvent if tracked_order.trade_type is TradeType.BUY \
+                        else SellOrderCompletedEvent
+                    self.trigger_event(event_tag,
+                                       event_class(self.current_timestamp,
+                                                   tracked_order.client_order_id,
+                                                   tracked_order.base_asset,
+                                                   tracked_order.quote_asset,
+                                                   tracked_order.fee_asset,
+                                                   tracked_order.executed_amount_base,
+                                                   tracked_order.executed_amount_quote,
+                                                   float(fee.fee_amount_in_quote(tracked_order.trading_pair,
+                                                                                 Decimal(str(tracked_order.price)),
+                                                                                 Decimal(str(tracked_order.amount)),
+                                                                                 self)),  # this ignores the gas fee, which is fine for now
+                                                   tracked_order.order_type))
+                else:
+                    self.logger().info(
+                        f"The market order {tracked_order.client_order_id} has failed according to order status API. ")
+                    self.trigger_event(MarketEvent.OrderFailure,
+                                       MarketOrderFailureEvent(
+                                           self.current_timestamp,
+                                           tracked_order.client_order_id,
+                                           tracked_order.order_type
+                                       ))
+
+                self.stop_tracking_order(tracked_order.client_order_id)
 
     def get_taker_order_type(self):
         return OrderType.LIMIT
@@ -472,9 +473,12 @@ class PerpetualFinanceDerivative(ExchangeBase, PerpetualTrading):
         Is called automatically by the clock for each clock's tick (1 second by default).
         It checks if status polling task is due for execution.
         """
-        if time.time() - self._last_poll_timestamp > self.POLL_INTERVAL:
-            if self._poll_notifier is not None and not self._poll_notifier.is_set():
-                self._poll_notifier.set()
+        if (
+            time.time() - self._last_poll_timestamp > self.POLL_INTERVAL
+            and self._poll_notifier is not None
+            and not self._poll_notifier.is_set()
+        ):
+            self._poll_notifier.set()
 
     async def _status_polling_loop(self):
         while True:
@@ -523,11 +527,15 @@ class PerpetualFinanceDerivative(ExchangeBase, PerpetualTrading):
         self._in_flight_orders_snapshot_timestamp = self.current_timestamp
 
     async def _update_positions(self):
-        position_tasks = []
-        for pair in self._trading_pairs:
-            position_tasks.append(self._api_request("post",
-                                                    "perpfi/position",
-                                                    {"pair": convert_to_exchange_trading_pair(pair)}))
+        position_tasks = [
+            self._api_request(
+                "post",
+                "perpfi/position",
+                {"pair": convert_to_exchange_trading_pair(pair)},
+            )
+            for pair in self._trading_pairs
+        ]
+
         positions = await safe_gather(*position_tasks, return_exceptions=True)
         for trading_pair, position in zip(self._trading_pairs, positions):
             position = position.get("position", {})
@@ -568,11 +576,15 @@ class PerpetualFinanceDerivative(ExchangeBase, PerpetualTrading):
     async def _funding_info_polling_loop(self):
         while True:
             try:
-                funding_info_tasks = []
-                for pair in self._trading_pairs:
-                    funding_info_tasks.append(self._api_request("post",
-                                                                "perpfi/funding",
-                                                                {"pair": convert_to_exchange_trading_pair(pair)}))
+                funding_info_tasks = [
+                    self._api_request(
+                        "post",
+                        "perpfi/funding",
+                        {"pair": convert_to_exchange_trading_pair(pair)},
+                    )
+                    for pair in self._trading_pairs
+                ]
+
                 funding_infos = await safe_gather(*funding_info_tasks, return_exceptions=True)
                 for trading_pair, funding_info in zip(self._trading_pairs, funding_infos):
                     self._funding_info[trading_pair] = FundingInfo(

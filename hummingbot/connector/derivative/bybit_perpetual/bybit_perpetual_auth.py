@@ -30,11 +30,9 @@ class BybitPerpetualAuth():
         :return: a dictionary of authentication info including the request signature
         """
         expires = self.get_expiration_timestamp()
-        raw_signature = 'GET/realtime' + expires
+        raw_signature = f'GET/realtime{expires}'
         signature = hmac.new(self._secret_key.encode('utf-8'), raw_signature.encode('utf-8'), hashlib.sha256).hexdigest()
-        auth_info = [self._api_key, expires, signature]
-
-        return auth_info
+        return [self._api_key, expires, signature]
 
     def get_headers(self, referer_header_required: Optional[bool] = False) -> Dict[str, Any]:
         """
@@ -45,9 +43,7 @@ class BybitPerpetualAuth():
             "Content-Type": "application/json"
         }
         if referer_header_required:
-            result.update({
-                "Referer": CONSTANTS.HBOT_BROKER_ID
-            })
+            result["Referer"] = CONSTANTS.HBOT_BROKER_ID
         return result
 
     def extend_params_with_authentication_info(self, params: Dict[str, Any]):
@@ -57,7 +53,7 @@ class BybitPerpetualAuth():
         for key, value in sorted(params.items()):
             converted_value = float(value) if type(value) is Decimal else value
             converted_value = converted_value if type(value) is str else json.dumps(converted_value)
-            key_value_elements.append(str(key) + "=" + converted_value)
+            key_value_elements.append(f'{str(key)}={converted_value}')
         raw_signature = '&'.join(key_value_elements)
         signature = hmac.new(self._secret_key.encode('utf-8'), raw_signature.encode('utf-8'), hashlib.sha256).hexdigest()
         params["sign"] = signature

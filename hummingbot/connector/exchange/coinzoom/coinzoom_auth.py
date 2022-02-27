@@ -22,10 +22,9 @@ class CoinzoomAuth():
         Generates authentication headers required by CoinZoom
         :return: a dictionary of auth headers
         """
-        headers = {
+        return {
             "Content-Type": "application/json",
             "Coinzoom-Api-Key": str(self.api_key),
             "Coinzoom-Api-Secret": str(self.secret_key),
             "User-Agent": f"hummingbot ZoomMe: {self.username}"
         }
-        return headers

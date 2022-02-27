@@ -35,8 +35,11 @@ class BybitPerpetualOrderBookTracker(OrderBookTracker):
 
     async def trading_pair_symbol(self, trading_pair: str) -> str:
         trading_pairs_map = await BybitPerpetualAPIOrderBookDataSource.trading_pair_symbol_map(self._domain)
-        symbols = [symbol for symbol, map_trading_pair in trading_pairs_map.items() if trading_pair == map_trading_pair]
-        if symbols:
+        if symbols := [
+            symbol
+            for symbol, map_trading_pair in trading_pairs_map.items()
+            if trading_pair == map_trading_pair
+        ]:
             symbol = symbols[0]
         else:
             raise ValueError(f"The symbol representing trading pair {trading_pair} could not be found")

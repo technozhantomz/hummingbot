@@ -13,8 +13,7 @@ DEFAULT_FEES = [0.05, 0.2]
 
 
 def build_api_factory() -> WebAssistantsFactory:
-    api_factory = WebAssistantsFactory()
-    return api_factory
+    return WebAssistantsFactory()
 
 
 KEYS = {

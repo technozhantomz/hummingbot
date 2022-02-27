@@ -39,10 +39,7 @@ class GateIoAPIUserStreamDataSource(UserStreamTrackerDataSource):
 
     @property
     def last_recv_time(self) -> float:
-        recv_time = 0
-        if self._ws is not None:
-            recv_time = self._ws.last_recv_time
-        return recv_time
+        return self._ws.last_recv_time if self._ws is not None else 0
 
     async def _listen_to_orders_trades_balances(self) -> AsyncIterable[Any]:
         """

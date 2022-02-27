@@ -68,7 +68,7 @@ class HitbtcAPIOrderBookDataSource(OrderBookTrackerDataSource):
         for trading_pair in trading_pairs:
             ex_pair: str = await HitbtcAPIOrderBookDataSource.exchange_symbol_associated_to_pair(trading_pair)
             if len(trading_pairs) > 1:
-                ticker: Dict[Any] = list([tic for tic in tickers if tic['symbol'] == ex_pair])[0]
+                ticker: Dict[Any] = [tic for tic in tickers if tic['symbol'] == ex_pair][0]
             else:
                 url_endpoint = Constants.ENDPOINT["TICKER_SINGLE"].format(trading_pair=ex_pair)
                 ticker: Dict[Any] = await api_call_with_retries("GET", url_endpoint)
@@ -78,9 +78,9 @@ class HitbtcAPIOrderBookDataSource(OrderBookTrackerDataSource):
     @staticmethod
     async def exchange_symbol_associated_to_pair(trading_pair: str) -> str:
         symbol_map = await HitbtcAPIOrderBookDataSource.trading_pair_symbol_map()
-        symbols = [symbol for symbol, pair in symbol_map.items() if pair == trading_pair]
-
-        if symbols:
+        if symbols := [
+            symbol for symbol, pair in symbol_map.items() if pair == trading_pair
+        ]:
             symbol = symbols[0]
         else:
             raise ValueError(f"There is no symbol mapping for trading pair {trading_pair}")

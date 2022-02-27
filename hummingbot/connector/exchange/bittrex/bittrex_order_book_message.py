@@ -65,8 +65,7 @@ class BittrexOrderBookMessage(OrderBookMessage):
     def __lt__(self, other) -> bool:
         if self.timestamp != other.timestamp:
             return self.timestamp < other.timestamp
-        else:
-            """
+        """
             If timestamp is the same, the ordering is snapshot < diff < trade
             """
-            return self.type.value < other.type.value
+        return self.type.value < other.type.value

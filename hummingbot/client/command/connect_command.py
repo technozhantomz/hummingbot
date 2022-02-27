@@ -42,8 +42,9 @@ class ConnectCommand:
         to_connect = True
         if Security.encrypted_file_exists(exchange_configs[0].key):
             await Security.wait_til_decryption_done()
-            api_key_config = [c for c in exchange_configs if "api_key" in c.key]
-            if api_key_config:
+            if api_key_config := [
+                c for c in exchange_configs if "api_key" in c.key
+            ]:
                 api_key_config = api_key_config[0]
                 api_key = Security.decrypted_value(api_key_config.key)
                 prompt = f"Would you like to replace your existing {exchange} API key {api_key} (Yes/No)? >>> "
@@ -87,10 +88,10 @@ class ConnectCommand:
         self._notify("\nTesting connections, please wait...")
         await Security.wait_til_decryption_done()
         df, failed_msgs = await self.connection_df()
-        lines = ["    " + line for line in df.to_string(index=False).split("\n")]
+        lines = [f"    {line}" for line in df.to_string(index=False).split("\n")]
         if failed_msgs:
             lines.append("\nFailed connections:")
-            lines.extend(["    " + k + ": " + v for k, v in failed_msgs.items()])
+            lines.extend([f"    {k}: {v}" for k, v in failed_msgs.items()])
         self._notify("\n".join(lines))
 
     async def connection_df(self  # type: HummingbotApplication

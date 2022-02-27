@@ -63,9 +63,7 @@ class BinanceAPIUserStreamDataSource(UserStreamTrackerDataSource):
         Returns the time of the last received message
         :return: the timestamp of the last received message in seconds
         """
-        if self._ws_assistant:
-            return self._ws_assistant.last_recv_time
-        return -1
+        return self._ws_assistant.last_recv_time if self._ws_assistant else -1
 
     async def listen_for_user_stream(self, ev_loop: asyncio.AbstractEventLoop, output: asyncio.Queue):
         """

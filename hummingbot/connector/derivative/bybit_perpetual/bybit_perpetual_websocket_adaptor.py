@@ -28,29 +28,23 @@ class BybitPerpetualWebSocketAdaptor:
     def endpoint_from_message(cls, message: Dict[str, Any]) -> str:
         if not isinstance(message, dict):
             return message
-        if cls._operation_field_name in message.keys():
+        if cls._operation_field_name in message:
             if message[cls._operation_field_name] is cls._subscription_operation:
                 return message[cls._payload_field_name][0]
             else:
                 return message[cls._operation_field_name]
-        if cls._topic_field_name in message.keys():
+        if cls._topic_field_name in message:
             return message[cls._topic_field_name]
 
     @classmethod
     def payload_from_message(cls, message: Dict[str, Any]) -> List[Dict[str, Any]]:
-        if "data" in message:
-            return message["data"]
-        return message
+        return message.get("data", message)
 
     async def send_request(self, payload: Dict[str, Any]):
         await self._websocket.send_json(payload)
 
     def _symbols_filter(self, symbols):
-        if symbols:
-            symbol_filter = "|".join(symbols)
-        else:
-            symbol_filter = "*"
-        return symbol_filter
+        return "|".join(symbols) if symbols else "*"
 
     async def authenticate(self, payload: Dict[str, Any]):
         authentication_message = {self._operation_field_name: self._authentication_operation,
@@ -100,8 +94,7 @@ class BybitPerpetualWebSocketAdaptor:
         try:
             while True:
                 try:
-                    msg = await self.receive_json(timeout=self.MESSAGE_TIMEOUT)
-                    yield msg
+                    yield await self.receive_json(timeout=self.MESSAGE_TIMEOUT)
                 except asyncio.TimeoutError:
                     await asyncio.wait_for(
                         self.send_request(payload={self._operation_field_name: CONSTANTS.WS_PING_REQUEST}),

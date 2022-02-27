@@ -87,23 +87,17 @@ class ConnectorSetting(NamedTuple):
     def conn_init_parameters(self, api_keys: Dict[str, Any]) -> Dict[str, Any]:
         if not self.is_sub_domain:
             return api_keys
-        else:
-            params = {k.replace(self.name, self.parent_name): v for k, v in api_keys.items()}
-            params["domain"] = self.domain_parameter
-            return params
+        params = {k.replace(self.name, self.parent_name): v for k, v in api_keys.items()}
+        params["domain"] = self.domain_parameter
+        return params
 
     def add_domain_parameter(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        if not self.is_sub_domain:
-            return params
-        else:
+        if self.is_sub_domain:
             params["domain"] = self.domain_parameter
-            return params
+        return params
 
     def base_name(self) -> str:
-        if self.is_sub_domain:
-            return self.parent_name
-        else:
-            return self.name
+        return self.parent_name if self.is_sub_domain else self.name
 
 
 class AllConnectorSettings:

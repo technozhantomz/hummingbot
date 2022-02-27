@@ -13,7 +13,7 @@ class DydxPerpetualAuth:
             timestamp=ts,
             data={},
         )
-        ws_auth_params = {
+        return {
             "type": "subscribe",
             "channel": "v3_accounts",
             "accountNumber": self._dydx_client.account_number,
@@ -22,5 +22,3 @@ class DydxPerpetualAuth:
             "timestamp": ts,
             "signature": auth_sig
         }
-
-        return ws_auth_params

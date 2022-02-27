@@ -48,8 +48,7 @@ class BitmartAPIOrderBookDataSource(OrderBookTrackerDataSource):
 
     @classmethod
     def _get_throttler_instance(cls) -> AsyncThrottler:
-        throttler = AsyncThrottler(CONSTANTS.RATE_LIMITS)
-        return throttler
+        return AsyncThrottler(CONSTANTS.RATE_LIMITS)
 
     async def _get_rest_assistant(self) -> RESTAssistant:
         if self._rest_assistant is None:

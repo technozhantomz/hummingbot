@@ -66,9 +66,12 @@ class FtxOrderBookTracker(OrderBookTracker):
         """
         Starts tracking for any new trading pairs, and stop tracking for any inactive trading pairs.
         """
-        tracking_trading_pair: Set[str] = set(
-            [key for key in self._tracking_tasks.keys() if not self._tracking_tasks[key].done()]
-        )
+        tracking_trading_pair: Set[str] = {
+            key
+            for key in self._tracking_tasks.keys()
+            if not self._tracking_tasks[key].done()
+        }
+
         available_pairs: Dict[str, FtxOrderBookTrackerEntry] = await self.data_source.get_tracking_pairs()
         available_trading_pair: Set[str] = set(available_pairs.keys())
         new_trading_pair: Set[str] = available_trading_pair - tracking_trading_pair

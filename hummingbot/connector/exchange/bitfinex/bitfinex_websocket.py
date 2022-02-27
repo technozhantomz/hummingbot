@@ -29,7 +29,7 @@ class BitfinexWebsocket():
     def __init__(self, auth: Optional[BitfinexAuth]):
         self._client = None
         self._auth = auth
-        self._consumers = dict()
+        self._consumers = {}
         self._listening = False
 
     # connect to exchange
@@ -80,8 +80,7 @@ class BitfinexWebsocket():
     # listen to consumer's queue updates
     async def _listen_to_queue(self, consumer_id: str) -> AsyncIterable[Any]:
         try:
-            msg = self._consumers[consumer_id].get_nowait()
-            yield msg
+            yield self._consumers[consumer_id].get_nowait()
         except asyncio.QueueEmpty:
             yield None
         except Exception as e:

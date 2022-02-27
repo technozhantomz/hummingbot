@@ -52,14 +52,13 @@ def parse_cvar_value(cvar: ConfigVar, value: Any) -> Any:
     elif cvar.type == 'str':
         return str(value)
     elif cvar.type == 'list':
-        if isinstance(value, str):
-            if len(value) == 0:
-                return []
-            filtered: filter = filter(lambda x: x not in ['[', ']', '"', "'"], list(value))
-            value = "".join(filtered).split(",")  # create csv and generate list
-            return [s.strip() for s in value]  # remove leading and trailing whitespaces
-        else:
+        if not isinstance(value, str):
             return value
+        if len(value) == 0:
+            return []
+        filtered: filter = filter(lambda x: x not in ['[', ']', '"', "'"], list(value))
+        value = "".join(filtered).split(",")  # create csv and generate list
+        return [s.strip() for s in value]  # remove leading and trailing whitespaces
     elif cvar.type == 'json':
         if isinstance(value, str):
             value_json = value.replace("'", '"')  # replace single quotes with double quotes for valid JSON
@@ -102,10 +101,7 @@ def cvar_json_migration(cvar: ConfigVar, cvar_value: Any) -> Any:
     and min_quote_order_amount (deprecated), they were List but change to Dict.
     """
     if cvar.key in ("paper_trade_account_balance", "min_quote_order_amount") and isinstance(cvar_value, List):
-        results = {}
-        for item in cvar_value:
-            results[item[0]] = item[1]
-        return results
+        return {item[0]: item[1] for item in cvar_value}
     return cvar_value
 
 
@@ -420,9 +416,7 @@ def load_secure_values(config_map):
 
 
 def format_config_file_name(file_name):
-    if "." not in file_name:
-        return file_name + ".yml"
-    return file_name
+    return f'{file_name}.yml' if "." not in file_name else file_name
 
 
 def parse_config_default_to_text(config: ConfigVar) -> str:

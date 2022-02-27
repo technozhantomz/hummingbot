@@ -69,7 +69,7 @@ class HistoryCommand:
                              trades: List[TradeFill],
                              precision: Optional[int] = None,
                              display_report: bool = True) -> Decimal:
-        market_info: Set[Tuple[str, str]] = set((t.market, t.symbol) for t in trades)
+        market_info: Set[Tuple[str, str]] = {(t.market, t.symbol) for t in trades}
         if display_report:
             self.report_header(start_time)
         return_pcts = []
@@ -87,7 +87,10 @@ class HistoryCommand:
             if display_report:
                 self.report_performance_by_market(market, symbol, perf, precision)
             return_pcts.append(perf.return_pct)
-        avg_return = sum(return_pcts) / len(return_pcts) if len(return_pcts) > 0 else s_decimal_0
+        avg_return = (
+            sum(return_pcts) / len(return_pcts) if return_pcts else s_decimal_0
+        )
+
         if display_report and len(return_pcts) > 1:
             self._notify(f"\nAveraged Return = {avg_return:.2%}")
         return avg_return
@@ -101,16 +104,15 @@ class HistoryCommand:
             if paper_balances is None:
                 return {}
             return {token: Decimal(str(bal)) for token, bal in paper_balances.items()}
-        elif "perpetual_finance" == market:
+        elif market == "perpetual_finance":
             return await UserBalances.xdai_balances()
         else:
             gateway_eth_connectors = [cs.name for cs in AllConnectorSettings.get_connector_settings().values()
                                       if cs.use_ethereum_wallet and cs.type == ConnectorType.Connector]
             if market in gateway_eth_connectors:
                 return await UserBalances.instance().eth_n_erc20_balances()
-            else:
-                await UserBalances.instance().update_exchange_balance(market)
-                return UserBalances.instance().all_balances(market)
+            await UserBalances.instance().update_exchange_balance(market)
+            return UserBalances.instance().all_balances(market)
 
     def report_header(self,  # type: HummingbotApplication
                       start_time: float):
@@ -128,12 +130,8 @@ class HistoryCommand:
                                      trading_pair: str,
                                      perf: PerformanceMetrics,
                                      precision: int):
-        lines = []
         base, quote = trading_pair.split("-")
-        lines.extend(
-            [f"\n{market} / {trading_pair}"]
-        )
-
+        lines = list([f"\n{market} / {trading_pair}"])
         trades_columns = ["", "buy", "sell", "total"]
         trades_data = [
             [f"{'Number of trades':<27}", perf.num_buys, perf.num_sells, perf.num_trades],
@@ -151,31 +149,56 @@ class HistoryCommand:
              PerformanceMetrics.smart_round(perf.avg_tot_price, precision)],
         ]
         trades_df: pd.DataFrame = pd.DataFrame(data=trades_data, columns=trades_columns)
-        lines.extend(["", "  Trades:"] + ["    " + line for line in trades_df.to_string(index=False).split("\n")])
+        lines.extend(
+            ["", "  Trades:"]
+            + [
+                f"    {line}"
+                for line in trades_df.to_string(index=False).split("\n")
+            ]
+        )
+
 
         assets_columns = ["", "start", "current", "change"]
         assets_data = [
-            [f"{base:<17}", "-", "-", "-"] if market in AllConnectorSettings.get_derivative_names() else  # No base asset for derivatives because they are margined
-            [f"{base:<17}",
-             PerformanceMetrics.smart_round(perf.start_base_bal, precision),
-             PerformanceMetrics.smart_round(perf.cur_base_bal, precision),
-             PerformanceMetrics.smart_round(perf.tot_vol_base, precision)],
-            [f"{quote:<17}",
-             PerformanceMetrics.smart_round(perf.start_quote_bal, precision),
-             PerformanceMetrics.smart_round(perf.cur_quote_bal, precision),
-             PerformanceMetrics.smart_round(perf.tot_vol_quote, precision)],
-            [f"{trading_pair + ' price':<17}",
-             PerformanceMetrics.smart_round(perf.start_price),
-             PerformanceMetrics.smart_round(perf.cur_price),
-             PerformanceMetrics.smart_round(perf.cur_price - perf.start_price)],
-            [f"{'Base asset %':<17}", "-", "-", "-"] if market in AllConnectorSettings.get_derivative_names() else  # No base asset for derivatives because they are margined
-            [f"{'Base asset %':<17}",
-             f"{perf.start_base_ratio_pct:.2%}",
-             f"{perf.cur_base_ratio_pct:.2%}",
-             f"{perf.cur_base_ratio_pct - perf.start_base_ratio_pct:.2%}"],
+            [f"{base:<17}", "-", "-", "-"]
+            if market in AllConnectorSettings.get_derivative_names()
+            else [  # No base asset for derivatives because they are margined
+                f"{base:<17}",
+                PerformanceMetrics.smart_round(perf.start_base_bal, precision),
+                PerformanceMetrics.smart_round(perf.cur_base_bal, precision),
+                PerformanceMetrics.smart_round(perf.tot_vol_base, precision),
+            ],
+            [
+                f"{quote:<17}",
+                PerformanceMetrics.smart_round(perf.start_quote_bal, precision),
+                PerformanceMetrics.smart_round(perf.cur_quote_bal, precision),
+                PerformanceMetrics.smart_round(perf.tot_vol_quote, precision),
+            ],
+            [
+                f'{f"{trading_pair} price":<17}',
+                PerformanceMetrics.smart_round(perf.start_price),
+                PerformanceMetrics.smart_round(perf.cur_price),
+                PerformanceMetrics.smart_round(perf.cur_price - perf.start_price),
+            ],
+            [f"{'Base asset %':<17}", "-", "-", "-"]
+            if market in AllConnectorSettings.get_derivative_names()
+            else [  # No base asset for derivatives because they are margined
+                f"{'Base asset %':<17}",
+                f"{perf.start_base_ratio_pct:.2%}",
+                f"{perf.cur_base_ratio_pct:.2%}",
+                f"{perf.cur_base_ratio_pct - perf.start_base_ratio_pct:.2%}",
+            ],
         ]
+
         assets_df: pd.DataFrame = pd.DataFrame(data=assets_data, columns=assets_columns)
-        lines.extend(["", "  Assets:"] + ["    " + line for line in assets_df.to_string(index=False).split("\n")])
+        lines.extend(
+            ["", "  Assets:"]
+            + [
+                f"    {line}"
+                for line in assets_df.to_string(index=False).split("\n")
+            ]
+        )
+
 
         perf_data = [
             ["Hold portfolio value    ", f"{PerformanceMetrics.smart_round(perf.hold_value, precision)} {quote}"],
@@ -191,8 +214,18 @@ class HistoryCommand:
              ["Return %                ", f"{perf.return_pct:.2%}"]]
         )
         perf_df: pd.DataFrame = pd.DataFrame(data=perf_data)
-        lines.extend(["", "  Performance:"] +
-                     ["    " + line for line in perf_df.to_string(index=False, header=False).split("\n")])
+        lines.extend(
+            (
+                ["", "  Performance:"]
+                + [
+                    f"    {line}"
+                    for line in perf_df.to_string(index=False, header=False).split(
+                        "\n"
+                    )
+                ]
+            )
+        )
+
 
         self._notify("\n".join(lines))
 
@@ -234,7 +267,7 @@ class HistoryCommand:
                 config_file_path=self.strategy_file_name)
             if self.strategy_name == "celo_arb":
                 celo_trades = self.strategy.celo_orders_to_trade_fills()
-                queried_trades = queried_trades + celo_trades
+                queried_trades += celo_trades
             df: pd.DataFrame = TradeFill.to_pandas(queried_trades)
 
         if len(df) > 0:
@@ -245,8 +278,7 @@ class HistoryCommand:
                     f"\n  Showing last {MAXIMUM_TRADE_FILLS_DISPLAY_OUTPUT} trades in the current session.")
             else:
                 df_lines = str(df).split("\n")
-            lines.extend(["", "  Recent trades:"] +
-                         ["    " + line for line in df_lines])
+            lines.extend((["", "  Recent trades:"] + [f"    {line}" for line in df_lines]))
         else:
             lines.extend(["\n  No past trades in this session."])
         self._notify("\n".join(lines))

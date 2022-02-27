@@ -87,21 +87,33 @@ class ConfigCommand:
                 if cv.key in global_configs_to_display and not cv.is_secure]
         df = map_df_to_str(pd.DataFrame(data=data, columns=columns))
         self._notify("\nGlobal Configurations:")
-        lines = ["    " + line for line in df.to_string(index=False, max_colwidth=50).split("\n")]
+        lines = [
+            f"    {line}"
+            for line in df.to_string(index=False, max_colwidth=50).split("\n")
+        ]
+
         self._notify("\n".join(lines))
 
         data = [[cv.key, cv.value] for cv in global_config_map.values()
                 if cv.key in color_settings_to_display and not cv.is_secure]
         df = map_df_to_str(pd.DataFrame(data=data, columns=columns))
         self._notify("\nColor Settings:")
-        lines = ["    " + line for line in df.to_string(index=False, max_colwidth=50).split("\n")]
+        lines = [
+            f"    {line}"
+            for line in df.to_string(index=False, max_colwidth=50).split("\n")
+        ]
+
         self._notify("\n".join(lines))
 
         if self.strategy_name is not None:
             data = [[cv.printable_key or cv.key, cv.value] for cv in self.strategy_config_map.values() if not cv.is_secure]
             df = map_df_to_str(pd.DataFrame(data=data, columns=columns))
             self._notify("\nStrategy Configurations:")
-            lines = ["    " + line for line in df.to_string(index=False, max_colwidth=50).split("\n")]
+            lines = [
+                f"    {line}"
+                for line in df.to_string(index=False, max_colwidth=50).split("\n")
+            ]
+
             self._notify("\n".join(lines))
 
     def config_able_keys(self  # type: HummingbotApplication
@@ -118,11 +130,10 @@ class ConfigCommand:
     async def check_password(self,  # type: HummingbotApplication
                              ):
         password = await self.app.prompt(prompt="Enter your password >>> ", is_password=True)
-        if password != Security.password:
-            self._notify("Invalid password, please try again.")
-            return False
-        else:
+        if password == Security.password:
             return True
+        self._notify("Invalid password, please try again.")
+        return False
 
     # Make this function static so unit testing can be performed.
     @staticmethod
@@ -177,8 +188,10 @@ class ConfigCommand:
             self.app.app.style = load_style()
             for config in missings:
                 self._notify(f"{config.key}: {str(config.value)}")
-            if isinstance(self.strategy, PureMarketMakingStrategy) or \
-               isinstance(self.strategy, PerpetualMarketMakingStrategy):
+            if isinstance(
+                self.strategy,
+                (PureMarketMakingStrategy, PerpetualMarketMakingStrategy),
+            ):
                 updated = ConfigCommand.update_running_mm(self.strategy, key, config_var.value)
                 if updated:
                     self._notify(f"\nThe current {self.strategy_name} strategy has been updated "

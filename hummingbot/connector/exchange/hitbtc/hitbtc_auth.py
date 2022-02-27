@@ -28,7 +28,7 @@ class HitbtcAuth():
         nonce = str(int(time.time()))
         body = ""
         # Need to build the full URL with query string for HS256 sig
-        if params is not None and len(params) > 0:
+        if params is not None and params:
             query_string = "&".join([f"{k}={v}" for k, v in params.items()])
             if method == "GET":
                 url = f"{url}?{query_string}"
@@ -65,8 +65,7 @@ class HitbtcAuth():
         :return: a dictionary of auth headers
         """
         payload = self.generate_payload(method, url, params)
-        headers = {
+        return {
             "Authorization": f"HS256 {payload}",
             "Content-Type": "application/x-www-form-urlencoded",
         }
-        return headers

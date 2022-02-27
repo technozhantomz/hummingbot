@@ -39,8 +39,7 @@ def json_to_zrx_order(data: Optional[Dict[str, any]]) -> Optional[ZeroExOrder]:
 
 
 def build_api_factory() -> WebAssistantsFactory:
-    api_factory = WebAssistantsFactory()
-    return api_factory
+    return WebAssistantsFactory()
 
 
 def split_hb_trading_pair(trading_pair: str) -> Tuple[str, str]:
@@ -49,5 +48,4 @@ def split_hb_trading_pair(trading_pair: str) -> Tuple[str, str]:
 
 
 def combine_to_hb_trading_pair(base: str, quote: str) -> str:
-    trading_pair = f"{base}-{quote}"
-    return trading_pair
+    return f"{base}-{quote}"

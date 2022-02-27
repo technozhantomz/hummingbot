@@ -52,10 +52,7 @@ class BinanceOrderBookTracker(OrderBookTracker):
 
     @property
     def exchange_name(self) -> str:
-        if self._domain == "com":
-            return "binance"
-        else:
-            return f"binance_{self._domain}"
+        return "binance" if self._domain == "com" else f"binance_{self._domain}"
 
     def start(self):
         """

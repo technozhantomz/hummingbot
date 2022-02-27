@@ -42,7 +42,7 @@ class StartCommand:
     async def wait_till_ready(self,  # type: HummingbotApplication
                               func: Callable, *args, **kwargs):
         while True:
-            all_ready = all([market.ready for market in self.markets.values()])
+            all_ready = all(market.ready for market in self.markets.values())
             if not all_ready:
                 await asyncio.sleep(0.5)
             else:
@@ -87,7 +87,10 @@ class StartCommand:
         self._initialize_notifiers()
 
         self._notify(f"\nStatus check complete. Starting '{self.strategy_name}' strategy...")
-        if any([str(exchange).endswith("paper_trade") for exchange in settings.required_exchanges]):
+        if any(
+            str(exchange).endswith("paper_trade")
+            for exchange in settings.required_exchanges
+        ):
             self._notify("\nPaper Trading Active: All orders are simulated, and no real orders are placed.")
 
         for exchange in settings.required_exchanges:
@@ -162,7 +165,6 @@ class StartCommand:
     async def confirm_oracle_conversion_rate(self,  # type: HummingbotApplication
                                              ) -> bool:
         try:
-            result = False
             self.app.clear_input()
             self.placeholder_mode = True
             self.app.hide_input = True
@@ -176,8 +178,7 @@ class StartCommand:
                                required_if=lambda: True,
                                validator=lambda v: validate_bool(v))
             await self.prompt_a_config(config)
-            if config.value:
-                result = True
+            result = bool(config.value)
         except OracleRateUnavailable:
             self._notify("Oracle rate is not available.")
         finally:

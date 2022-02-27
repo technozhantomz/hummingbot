@@ -177,8 +177,7 @@ class MarketsRecorder:
                         .query(MarketState)
                         .filter(MarketState.config_file_path == config_file_path,
                                 MarketState.market == market.display_name))
-        market_states: Optional[MarketState] = query.one_or_none()
-        return market_states
+        return query.one_or_none()
 
     def _did_create_order(self,
                           event_tag: int,
@@ -194,22 +193,27 @@ class MarketsRecorder:
 
         with self._sql_manager.get_new_session() as session:
             with session.begin():
-                order_record: Order = Order(id=evt.order_id,
-                                            config_file_path=self._config_file_path,
-                                            strategy=self._strategy_name,
-                                            market=market.display_name,
-                                            symbol=evt.trading_pair,
-                                            base_asset=base_asset,
-                                            quote_asset=quote_asset,
-                                            creation_timestamp=timestamp,
-                                            order_type=evt.type.name,
-                                            amount=Decimal(evt.amount),
-                                            leverage=evt.leverage if evt.leverage else 1,
-                                            price=Decimal(evt.price) if evt.price == evt.price else Decimal(0),
-                                            position=evt.position if evt.position else PositionAction.NIL.value,
-                                            last_status=event_type.name,
-                                            last_update_timestamp=timestamp,
-                                            exchange_order_id=evt.exchange_order_id)
+                order_record: Order = Order(
+                    id=evt.order_id,
+                    config_file_path=self._config_file_path,
+                    strategy=self._strategy_name,
+                    market=market.display_name,
+                    symbol=evt.trading_pair,
+                    base_asset=base_asset,
+                    quote_asset=quote_asset,
+                    creation_timestamp=timestamp,
+                    order_type=evt.type.name,
+                    amount=Decimal(evt.amount),
+                    leverage=evt.leverage or 1,
+                    price=Decimal(evt.price)
+                    if evt.price == evt.price
+                    else Decimal(0),
+                    position=evt.position or PositionAction.NIL.value,
+                    last_status=event_type.name,
+                    last_update_timestamp=timestamp,
+                    exchange_order_id=evt.exchange_order_id,
+                )
+
                 order_status: OrderStatus = OrderStatus(order=order_record,
                                                         timestamp=timestamp,
                                                         status=event_type.name)
@@ -256,14 +260,16 @@ class MarketsRecorder:
                     order_id=order_id,
                     trade_type=evt.trade_type.name,
                     order_type=evt.order_type.name,
-                    price=Decimal(
-                        evt.price) if evt.price == evt.price else Decimal(0),
+                    price=Decimal(evt.price)
+                    if evt.price == evt.price
+                    else Decimal(0),
                     amount=Decimal(evt.amount),
-                    leverage=evt.leverage if evt.leverage else 1,
+                    leverage=evt.leverage or 1,
                     trade_fee=evt.trade_fee.to_json(),
                     exchange_trade_id=evt.exchange_trade_id,
-                    position=evt.position if evt.position else PositionAction.NIL.value,
+                    position=evt.position or PositionAction.NIL.value,
                 )
+
                 session.add(order_status)
                 session.add(trade_fill_record)
                 self.save_market_states(self._config_file_path, market, session=session)
@@ -312,7 +318,7 @@ class MarketsRecorder:
         return tuple(df.iloc[0].values) == header
 
     def append_to_csv(self, trade: TradeFill):
-        csv_filename = "trades_" + trade.config_file_path[:-4] + ".csv"
+        csv_filename = f"trades_{trade.config_file_path[:-4]}.csv"
         csv_path = os.path.join(data_path(), csv_filename)
 
         field_names = ("exchange_trade_id",)  # id field should be first
@@ -329,7 +335,13 @@ class MarketsRecorder:
         field_data += (age,)
 
         if (os.path.exists(csv_path) and (not self._csv_matches_header(csv_path, field_names))):
-            move(csv_path, csv_path[:-4] + '_old_' + pd.Timestamp.utcnow().strftime("%Y%m%d-%H%M%S") + ".csv")
+            move(
+                csv_path,
+                f'{csv_path[:-4]}_old_'
+                + pd.Timestamp.utcnow().strftime("%Y%m%d-%H%M%S")
+                + ".csv",
+            )
+
 
         if not os.path.exists(csv_path):
             df_header = pd.DataFrame([field_names])

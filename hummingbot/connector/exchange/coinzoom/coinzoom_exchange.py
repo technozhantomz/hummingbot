@@ -603,15 +603,13 @@ class CoinzoomExchange(ExchangeBase):
         Calls REST API to update total and available balances.
         """
         try:
-            # Check for in progress balance updates, queue if fetching and none already waiting, otherwise skip.
             if self._update_balances_fetching:
-                if not self._update_balances_queued:
-                    self._update_balances_queued = True
-                    await self._update_balances_finished.wait()
-                    self._update_balances_queued = False
-                    self._update_balances_finished = asyncio.Event()
-                else:
+                if self._update_balances_queued:
                     return
+                self._update_balances_queued = True
+                await self._update_balances_finished.wait()
+                self._update_balances_queued = False
+                self._update_balances_finished = asyncio.Event()
             self._update_balances_fetching = True
             account_info = await self._api_request("GET", Constants.ENDPOINT["USER_BALANCES"], is_auth_required=True)
             self._process_balance_message(account_info)
@@ -741,8 +739,9 @@ class CoinzoomExchange(ExchangeBase):
         else:
             exchange_order_id = str(order_msg["orderId"])
         tracked_orders = list(self._in_flight_orders.values())
-        track_order = [o for o in tracked_orders if exchange_order_id == o.exchange_order_id]
-        if track_order:
+        if track_order := [
+            o for o in tracked_orders if exchange_order_id == o.exchange_order_id
+        ]:
             tracked_order = track_order[0]
 
             # Estimate fee
@@ -834,7 +833,7 @@ class CoinzoomExchange(ExchangeBase):
         # if self._trading_pairs is None:
         #     raise Exception("cancel_all can only be used when trading_pairs are specified.")
         open_orders = [o for o in self._in_flight_orders.values() if not o.is_done]
-        if len(open_orders) == 0:
+        if not open_orders:
             return []
         tasks = [self._execute_cancel(o.trading_pair, o.client_order_id) for o in open_orders]
         cancellation_results = []
@@ -860,9 +859,8 @@ class CoinzoomExchange(ExchangeBase):
                          else Constants.LONG_POLL_INTERVAL)
         last_tick = int(self._last_timestamp / poll_interval)
         current_tick = int(timestamp / poll_interval)
-        if current_tick > last_tick:
-            if not self._poll_notifier.is_set():
-                self._poll_notifier.set()
+        if current_tick > last_tick and not self._poll_notifier.is_set():
+            self._poll_notifier.set()
         self._last_timestamp = timestamp
 
     def get_fee(self,
@@ -915,9 +913,10 @@ class CoinzoomExchange(ExchangeBase):
 
                 method: str = method_key[0]
 
-                if method == Constants.WS_METHODS["USER_ORDERS"]:
-                    self._process_order_message(event_message[method])
-                elif method == Constants.WS_METHODS["USER_ORDERS_CANCEL"]:
+                if method in [
+                    Constants.WS_METHODS["USER_ORDERS"],
+                    Constants.WS_METHODS["USER_ORDERS_CANCEL"],
+                ]:
                     self._process_order_message(event_message[method])
             except asyncio.CancelledError:
                 raise
@@ -941,7 +940,7 @@ class CoinzoomExchange(ExchangeBase):
             exchange_order_id = str(order["id"])
             # CoinZoom doesn't support client order ids yet so we must find it from the tracked orders.
             track_order = [o for o in tracked_orders if exchange_order_id == o.exchange_order_id]
-            if not track_order or len(track_order) < 1:
+            if not track_order:
                 # Skip untracked orders
                 continue
             client_order_id = track_order[0].client_order_id
@@ -954,15 +953,19 @@ class CoinzoomExchange(ExchangeBase):
             ret_val.append(
                 OpenOrder(
                     client_order_id=client_order_id,
-                    trading_pair=convert_from_exchange_trading_pair(order["symbol"]),
+                    trading_pair=convert_from_exchange_trading_pair(
+                        order["symbol"]
+                    ),
                     price=Decimal(str(order["price"])),
                     amount=Decimal(str(order["quantity"])),
                     executed_amount=Decimal(str(order["cumQuantity"])),
                     status=order["orderStatus"],
                     order_type=OrderType.LIMIT,
-                    is_buy=True if order["orderSide"].lower() == TradeType.BUY.name.lower() else False,
+                    is_buy=order["orderSide"].lower()
+                    == TradeType.BUY.name.lower(),
                     time=str_date_to_ts(order["timestamp"]),
-                    exchange_order_id=order["id"]
+                    exchange_order_id=order["id"],
                 )
             )
+
         return ret_val

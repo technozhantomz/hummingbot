@@ -31,10 +31,7 @@ class CustomBuffer(Buffer):
     def validate_and_handle(self):
         valid = self.validate(set_cursor=True)
         if valid:
-            if self.accept_handler:
-                keep_text = self.accept_handler(self)
-            else:
-                keep_text = False
+            keep_text = self.accept_handler(self) if self.accept_handler else False
             if not keep_text:
                 self.reset()
 
@@ -45,7 +42,7 @@ class FormattedTextLexer(Lexer):
 
     def __init__(self) -> None:
         super().__init__()
-        self.html_tag_css_style_map: Dict[str, str] = {style: css for style, css in load_style().style_rules}
+        self.html_tag_css_style_map: Dict[str, str] = dict(load_style().style_rules)
         self.html_tag_css_style_map.update({
             style: config.value
             for style, config in color_config_map.items()
@@ -74,7 +71,7 @@ class FormattedTextLexer(Lexer):
                                                                for special_word, style in self.text_style_tag_map.items()
                                                                for match in list(re.finditer(special_word, current_line))
                                                                ]
-                if len(matched_indexes) == 0:
+                if not matched_indexes:
                     return [("", current_line)]
 
                 previous_idx = 0
@@ -154,19 +151,13 @@ class CustomTextArea:
             focus_on_click=focus_on_click)
 
         if multiline:
-            if scrollbar:
-                right_margins = [ScrollbarMargin(display_arrows=True)]
-            else:
-                right_margins = []
-            if line_numbers:
-                left_margins = [NumberedMargin()]
-            else:
-                left_margins = []
+            right_margins = [ScrollbarMargin(display_arrows=True)] if scrollbar else []
+            left_margins = [NumberedMargin()] if line_numbers else []
         else:
             left_margins = []
             right_margins = []
 
-        style = 'class:text-area ' + style
+        style = f'class:text-area {style}'
 
         self.window = Window(
             height=height,
@@ -238,7 +229,7 @@ class CustomTextArea:
         new_lines = []
         for line in new_lines_raw:
             while len(line) > max_width:
-                new_lines.append(line[0:max_width])
+                new_lines.append(line[:max_width])
                 line = line[max_width:]
             new_lines.append(line)
 

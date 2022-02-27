@@ -14,7 +14,7 @@ from hummingbot.core.rate_oracle.rate_oracle import RateOracleSource, RateOracle
 
 
 def generate_client_id() -> str:
-    vals = [random.choice(range(0, 256)) for i in range(0, 20)]
+    vals = [random.choice(range(256)) for _ in range(20)]
     return "".join([f"{val:02x}" for val in vals])
 
 

@@ -83,7 +83,7 @@ class BinancePerpetualAPIOrderBookDataSource(OrderBookTrackerDataSource):
                                      domain: str = CONSTANTS.DOMAIN) -> Dict[str, float]:
         tasks = [cls.get_last_traded_price(t_pair, domain) for t_pair in trading_pairs]
         results = await safe_gather(*tasks)
-        return {t_pair: result for t_pair, result in zip(trading_pairs, results)}
+        return dict(zip(trading_pairs, results))
 
     @classmethod
     async def get_last_traded_price(cls,
@@ -239,7 +239,7 @@ class BinancePerpetualAPIOrderBookDataSource(OrderBookTrackerDataSource):
                 domain=domain,
                 throttler=throttler)}
             if limit != 0:
-                params.update({"limit": str(limit)})
+                params["limit"] = str(limit)
             url = utils.rest_url(CONSTANTS.SNAPSHOT_REST_URL, domain)
             throttler = throttler or ob_source_cls._get_throttler_instance()
             async with throttler.execute_task(limit_id=CONSTANTS.SNAPSHOT_REST_URL):

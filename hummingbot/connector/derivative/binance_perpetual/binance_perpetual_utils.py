@@ -58,8 +58,9 @@ def wss_url(endpoint: str, domain: str = "binance_perpetual"):
 
 
 def build_api_factory(auth: Optional[AuthBase] = None) -> WebAssistantsFactory:
-    api_factory = WebAssistantsFactory(auth=auth, rest_pre_processors=[BinancePerpetualRESTPreProcessor()])
-    return api_factory
+    return WebAssistantsFactory(
+        auth=auth, rest_pre_processors=[BinancePerpetualRESTPreProcessor()]
+    )
 
 
 def is_exchange_information_valid(exchange_info: Dict[str, Any]) -> bool:

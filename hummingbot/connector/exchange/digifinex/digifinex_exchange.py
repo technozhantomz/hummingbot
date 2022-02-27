@@ -555,10 +555,10 @@ class DigifinexExchange(ExchangeBase):
         tracked_order = self.find_exchange_order(exchange_order_id)
         if tracked_order is None:
             return
-        client_order_id = tracked_order.client_order_id
         # Update order execution status
         tracked_order.last_state = str(status)
         if tracked_order.is_cancelled:
+            client_order_id = tracked_order.client_order_id
             self.logger().info(f"Successfully cancelled order {client_order_id}.")
             self.trigger_event(MarketEvent.OrderCancelled,
                                OrderCancelledEvent(
@@ -731,9 +731,8 @@ class DigifinexExchange(ExchangeBase):
                          else self.LONG_POLL_INTERVAL)
         last_tick = int(self._last_timestamp / poll_interval)
         current_tick = int(timestamp / poll_interval)
-        if current_tick > last_tick:
-            if not self._poll_notifier.is_set():
-                self._poll_notifier.set()
+        if current_tick > last_tick and not self._poll_notifier.is_set():
+            self._poll_notifier.set()
         self._last_timestamp = timestamp
 
     def get_fee(self,
@@ -811,15 +810,18 @@ class DigifinexExchange(ExchangeBase):
             ret_val.append(
                 OpenOrder(
                     client_order_id=None,
-                    trading_pair=digifinex_utils.convert_from_exchange_trading_pair(order["symbol"]),
+                    trading_pair=digifinex_utils.convert_from_exchange_trading_pair(
+                        order["symbol"]
+                    ),
                     price=Decimal(str(order["price"])),
                     amount=Decimal(str(order["amount"])),
                     executed_amount=Decimal(str(order["executed_amount"])),
                     status=order["status"],
                     order_type=OrderType.LIMIT,
-                    is_buy=True if order["type"] == "buy" else False,
+                    is_buy=order["type"] == "buy",
                     time=int(order["created_date"]),
-                    exchange_order_id=order["order_id"]
+                    exchange_order_id=order["order_id"],
                 )
             )
+
         return ret_val

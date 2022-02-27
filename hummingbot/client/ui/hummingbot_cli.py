@@ -196,8 +196,7 @@ class HummingbotCLI:
         current_tabs = [t for t in self.command_tabs.values() if t.tab_index > 0]
         if not current_tabs:
             return
-        selected_tab = [t for t in current_tabs if t.is_selected]
-        if selected_tab:
+        if selected_tab := [t for t in current_tabs if t.is_selected]:
             right_tab = [t for t in current_tabs if t.tab_index == selected_tab[0].tab_index + 1]
         else:
             right_tab = [t for t in current_tabs if t.tab_index == 1]

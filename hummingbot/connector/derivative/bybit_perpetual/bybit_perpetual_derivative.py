@@ -446,9 +446,7 @@ class BybitPerpetualDerivative(ExchangeBase, PerpetualTrading):
                     "price": price,
                 })
             else:
-                params.update({
-                    "order_type": "Market"
-                })
+                params["order_type"] = "Market"
 
             self.start_tracking_order(order_id,
                                       None,
@@ -489,10 +487,9 @@ class BybitPerpetualDerivative(ExchangeBase, PerpetualTrading):
             self.trigger_event(MarketEvent.OrderFailure,
                                MarketOrderFailureEvent(self.current_timestamp, order_id, order_type))
             self.logger().network(
-                f"Error submitting {trade_type.name} {order_type.name} order to Bybit Perpetual for "
-                f"{amount} {trading_pair} {price}. Error: {str(e)} Parameters: {params if params else None}",
+                f"Error submitting {trade_type.name} {order_type.name} order to Bybit Perpetual for {amount} {trading_pair} {price}. Error: {str(e)} Parameters: {params or None}",
                 exc_info=True,
-                app_warning_msg="Error submitting order to Bybit Perpetual. "
+                app_warning_msg="Error submitting order to Bybit Perpetual. ",
             )
 
     def buy(self, trading_pair: str, amount: Decimal, order_type: OrderType = OrderType.MARKET,
@@ -586,15 +583,15 @@ class BybitPerpetualDerivative(ExchangeBase, PerpetualTrading):
 
             response_code = response["ret_code"]
             if response_code != 0:
-                if response_code == CONSTANTS.ORDER_NOT_EXISTS_ERROR_CODE:
-                    self.logger().warning(
-                        f"Failed to cancel order {order_id}:"
-                        f" order not found ({response_code} - {response['ret_msg']})")
-                    self.stop_tracking_order(order_id)
-                else:
-                    raise IOError(f"Bybit Perpetual encountered a problem cancelling the order"
-                                  f" ({response['ret_code']} - {response['ret_msg']})")
+                if response_code != CONSTANTS.ORDER_NOT_EXISTS_ERROR_CODE:
+                    raise IOError(
+                        f'Bybit Perpetual encountered a problem cancelling the order ({response_code} - {response["ret_msg"]})'
+                    )
 
+                self.logger().warning(
+                    f"Failed to cancel order {order_id}:"
+                    f" order not found ({response_code} - {response['ret_msg']})")
+                self.stop_tracking_order(order_id)
             return order_id
 
         except asyncio.CancelledError:
@@ -767,8 +764,10 @@ class BybitPerpetualDerivative(ExchangeBase, PerpetualTrading):
         Calls REST API to get order status
         """
 
-        active_orders: List[BybitPerpetualInFlightOrder] = [
-            o for o in self._in_flight_orders.values()]
+        active_orders: List[BybitPerpetualInFlightOrder] = list(
+            self._in_flight_orders.values()
+        )
+
 
         tasks = []
         for active_order in active_orders:
@@ -935,9 +934,8 @@ class BybitPerpetualDerivative(ExchangeBase, PerpetualTrading):
                 amount=amount * (Decimal("-1.0") if position_side == PositionSide.SHORT else Decimal("1.0")),
                 leverage=leverage,
             )
-        else:
-            if pos_key in self._account_positions:
-                del self._account_positions[pos_key]
+        elif pos_key in self._account_positions:
+            del self._account_positions[pos_key]
 
     def _process_order_event_message(self, order_msg: Dict[str, Any]):
         """
@@ -963,7 +961,7 @@ class BybitPerpetualDerivative(ExchangeBase, PerpetualTrading):
                                        client_order_id))
                 self.stop_tracking_order(client_order_id)
             elif tracked_order.is_failure:
-                reason = order_msg["reject_reason"] if "reject_reason" in order_msg else "unknown"
+                reason = order_msg.get("reject_reason", "unknown")
                 self.logger().info(f"The market order {client_order_id} has failed according to order status event. "
                                    f"Reason: {reason}")
                 self.trigger_event(MarketEvent.OrderFailure,
@@ -1096,11 +1094,11 @@ class BybitPerpetualDerivative(ExchangeBase, PerpetualTrading):
             try:
                 await self._funding_fee_poll_notifier.wait()
 
-                tasks = []
-                for trading_pair in self._trading_pairs:
-                    tasks.append(
-                        asyncio.create_task(self._fetch_funding_fee(trading_pair))
-                    )
+                tasks = [
+                    asyncio.create_task(self._fetch_funding_fee(trading_pair))
+                    for trading_pair in self._trading_pairs
+                ]
+
                 # Only when all tasks is successful would the event notifier be resetted
                 responses: List[bool] = await safe_gather(*tasks)
                 if all(responses):
@@ -1137,14 +1135,12 @@ class BybitPerpetualDerivative(ExchangeBase, PerpetualTrading):
         # Initial parsing of responses. Joining all the responses
         parsed_resps: List[Dict[str, Any]] = []
         for resp in raw_responses:
-            if not isinstance(resp, Exception):
-                result = resp["result"]
-                if result:
-                    position_entries = result if isinstance(result, list) else [result]
-                    parsed_resps.extend(position_entries)
-            else:
+            if isinstance(resp, Exception):
                 self.logger().error(f"Error fetching trades history. Response: {resp}")
 
+            elif result := resp["result"]:
+                position_entries = result if isinstance(result, list) else [result]
+                parsed_resps.extend(position_entries)
         for position in parsed_resps:
             data = position
             ex_trading_pair = data.get("symbol")
@@ -1165,9 +1161,8 @@ class BybitPerpetualDerivative(ExchangeBase, PerpetualTrading):
                     amount=amount * (Decimal("-1.0") if position_side == PositionSide.SHORT else Decimal("1.0")),
                     leverage=leverage,
                 )
-            else:
-                if pos_key in self._account_positions:
-                    del self._account_positions[pos_key]
+            elif pos_key in self._account_positions:
+                del self._account_positions[pos_key]
 
     async def _set_leverage(self, trading_pair: str, leverage: int = 1):
         ex_trading_pair = bybit_utils.convert_to_exchange_trading_pair(trading_pair)
@@ -1212,10 +1207,9 @@ class BybitPerpetualDerivative(ExchangeBase, PerpetualTrading):
         """
         if trading_pair in self._order_book_tracker.data_source.funding_info:
             return self._order_book_tracker.data_source.funding_info[trading_pair]
-        else:
-            self.logger().error(f"Funding Info for {trading_pair} not found. Proceeding to fetch using REST API.")
-            safe_ensure_future(self._order_book_tracker.data_source.get_funding_info(trading_pair))
-            return None
+        self.logger().error(f"Funding Info for {trading_pair} not found. Proceeding to fetch using REST API.")
+        safe_ensure_future(self._order_book_tracker.data_source.get_funding_info(trading_pair))
+        return None
 
     def get_buy_collateral_token(self, trading_pair: str) -> str:
         trading_rule: TradingRule = self._trading_rules[trading_pair]
@@ -1227,7 +1221,7 @@ class BybitPerpetualDerivative(ExchangeBase, PerpetualTrading):
 
     def _get_throttler_instance(self) -> AsyncThrottler:
         if self._trading_pairs is not None:
-            trading_pairs = [tp for tp in self._trading_pairs]
+            trading_pairs = list(self._trading_pairs)
         else:
             trading_pairs = []
 
@@ -1237,5 +1231,4 @@ class BybitPerpetualDerivative(ExchangeBase, PerpetualTrading):
                 trading_pairs.append(trading_pair)
 
         rate_limits = bybit_utils.build_rate_limits(trading_pairs)
-        throttler = AsyncThrottler(rate_limits)
-        return throttler
+        return AsyncThrottler(rate_limits)

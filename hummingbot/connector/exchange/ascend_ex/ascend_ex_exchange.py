@@ -863,9 +863,8 @@ class AscendExExchange(ExchangePyBase):
         )
         last_tick = int(self._last_timestamp / poll_interval)
         current_tick = int(timestamp / poll_interval)
-        if current_tick > last_tick:
-            if not self._poll_notifier.is_set():
-                self._poll_notifier.set()
+        if current_tick > last_tick and not self._poll_notifier.is_set():
+            self._poll_notifier.set()
         self._last_timestamp = timestamp
 
     def get_fee(
@@ -882,10 +881,12 @@ class AscendExExchange(ExchangePyBase):
         trading_pair = f"{base_currency}-{quote_currency}"
         trading_rule = self._trading_rules[trading_pair]
         fee_percent = Decimal("0")
-        if order_side == TradeType.BUY:
-            if trading_rule.commission_type == AscendExCommissionType.QUOTE:
-                fee_percent = trading_rule.commission_reserve_rate
-        elif trading_rule.commission_type == AscendExCommissionType.BASE:
+        if (
+            order_side == TradeType.BUY
+            and trading_rule.commission_type == AscendExCommissionType.QUOTE
+            or order_side != TradeType.BUY
+            and trading_rule.commission_type == AscendExCommissionType.BASE
+        ):
             fee_percent = trading_rule.commission_reserve_rate
         return AddedToCostTradeFee(percent=fee_percent)
 
@@ -913,7 +914,7 @@ class AscendExExchange(ExchangePyBase):
                 if event_message.get("m") == "order":
                     order_data = event_message.get("data")
                     trading_pair = order_data["s"]
-                    base_asset, quote_asset = tuple(asset for asset in trading_pair.split("/"))
+                    base_asset, quote_asset = tuple(trading_pair.split("/"))
                     self._process_order_message(
                         AscendExOrder(
                             trading_pair,
@@ -976,17 +977,20 @@ class AscendExExchange(ExchangePyBase):
             ret_val.append(
                 OpenOrder(
                     client_order_id=client_order_id,
-                    trading_pair=ascend_ex_utils.convert_from_exchange_trading_pair(order["symbol"]),
+                    trading_pair=ascend_ex_utils.convert_from_exchange_trading_pair(
+                        order["symbol"]
+                    ),
                     price=Decimal(str(order["price"])),
                     amount=Decimal(str(order["orderQty"])),
                     executed_amount=Decimal(str(order["cumFilledQty"])),
                     status=order["status"],
                     order_type=OrderType.LIMIT,
-                    is_buy=True if order["side"].lower() == "buy" else False,
+                    is_buy=order["side"].lower() == "buy",
                     time=int(order["lastExecTime"]),
                     exchange_order_id=exchange_order_id,
                 )
             )
+
         return ret_val
 
     def _process_order_message(self, order_msg: AscendExOrder):

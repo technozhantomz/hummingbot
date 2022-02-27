@@ -37,7 +37,7 @@ class HitbtcWebsocket(RequestId):
     def __init__(self,
                  auth: Optional[HitbtcAuth] = None):
         self._auth: Optional[HitbtcAuth] = auth
-        self._isPrivate = True if self._auth is not None else False
+        self._isPrivate = self._auth is not None
         self._WS_URL = Constants.WS_PRIVATE_URL if self._isPrivate else Constants.WS_PUBLIC_URL
         self._client: Optional[websockets.WebSocketClientProtocol] = None
 
@@ -72,10 +72,7 @@ class HitbtcWebsocket(RequestId):
                 try:
                     raw_msg_str: str = await asyncio.wait_for(self._client.recv(), timeout=Constants.MESSAGE_TIMEOUT)
                     try:
-                        msg = json.loads(raw_msg_str)
-                        # HitBTC doesn't support ping or heartbeat messages.
-                        # Can handle them here if that changes - use `safe_ensure_future`.
-                        yield msg
+                        yield json.loads(raw_msg_str)
                     except ValueError:
                         continue
                 except asyncio.TimeoutError:

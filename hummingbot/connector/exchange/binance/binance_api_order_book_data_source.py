@@ -89,7 +89,7 @@ class BinanceAPIOrderBookDataSource(OrderBookTrackerDataSource):
         local_throttler = throttler or cls._get_throttler_instance()
         tasks = [cls._get_last_traded_price(t_pair, domain, rest_assistant, local_throttler) for t_pair in trading_pairs]
         results = await safe_gather(*tasks)
-        return {t_pair: result for t_pair, result in zip(trading_pairs, results)}
+        return dict(zip(trading_pairs, results))
 
     @staticmethod
     @async_ttl_cache(ttl=2, maxsize=1)
@@ -423,8 +423,7 @@ class BinanceAPIOrderBookDataSource(OrderBookTrackerDataSource):
 
     @classmethod
     def _get_throttler_instance(cls) -> AsyncThrottler:
-        throttler = AsyncThrottler(CONSTANTS.RATE_LIMITS)
-        return throttler
+        return AsyncThrottler(CONSTANTS.RATE_LIMITS)
 
     @classmethod
     async def _get_last_traded_price(cls,

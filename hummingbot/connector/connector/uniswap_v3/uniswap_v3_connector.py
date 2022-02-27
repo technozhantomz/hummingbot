@@ -67,8 +67,7 @@ class UniswapV3Connector(UniswapConnector):
                 # self.logger().info(f"Initializing Uniswap connector and paths for {self._trading_pairs} pairs.")
                 resp = await self._api_request("get", "eth/uniswap/v3/start",
                                                {"pairs": json.dumps(self._trading_pairs)})
-                status = bool(str(resp["success"]))
-                if status:
+                if status := bool(str(resp["success"])):
                     self._initiate_pool_status = status
                     self._trading_pairs = resp["pairs"]
                     await asyncio.sleep(60)
@@ -162,7 +161,6 @@ class UniswapV3Connector(UniswapConnector):
                                                tracked_order.executed_amount_quote,
                                                float(fee),
                                                tracked_order.order_type))
-                self.stop_tracking_order(tracked_order.client_order_id)
             else:
                 self.logger().info(
                     f"The {tracked_order.type} order {tracked_order.client_order_id} has failed according to order status API. ")
@@ -172,89 +170,85 @@ class UniswapV3Connector(UniswapConnector):
                                        tracked_order.client_order_id,
                                        tracked_order.order_type
                                    ))
-                self.stop_tracking_order(tracked_order.client_order_id)
+
+            self.stop_tracking_order(tracked_order.client_order_id)
 
     async def update_lp_order(self, update_result: Dict[str, any], tracked_pos: UniswapV3InFlightPosition):
         """
         Unlike swap orders, lp orders only stop tracking when a remove position is detected.
         """
-        if update_result.get("confirmed", False):
-            if update_result["receipt"].get("status", 0) == 1:
-                gas_used = update_result["receipt"]["gasUsed"]
-                gas_price = tracked_pos.gas_price
-                fee = Decimal(str(gas_used)) * Decimal(str(gas_price)) / Decimal(str(1e9))
-                tracked_pos.tx_fees.append(fee)
-                transaction_results = await self._api_request("post",
-                                                              "eth/uniswap/v3/result",
-                                                              {"logs": json.dumps(update_result["receipt"]["logs"]),
-                                                               "pair": tracked_pos.trading_pair})
-                for result in transaction_results["info"]:
-                    if result["name"] == "IncreaseLiquidity" and tracked_pos.last_status == UniswapV3PositionStatus.PENDING_CREATE:
-                        token_id, amount0, amount1 = self.parse_liquidity_events(result["events"],
-                                                                                 transaction_results["baseDecimal"],
-                                                                                 transaction_results["quoteDecimal"])
-                        tracked_pos.token_id = token_id
-                        tracked_pos.base_amount = amount0
-                        tracked_pos.quote_amount = amount1
-                        tracked_pos.last_status = UniswapV3PositionStatus.OPEN
-                        self.logger().info(f"Liquidity added for tokenID - {token_id}.")
-                        self.trigger_event(MarketEvent.RangePositionUpdated,
-                                           RangePositionUpdatedEvent(self.current_timestamp,
-                                                                     tracked_pos.hb_id,
-                                                                     tracked_pos.last_tx_hash,
-                                                                     tracked_pos.token_id,
-                                                                     tracked_pos.base_amount,
-                                                                     tracked_pos.quote_amount,
-                                                                     tracked_pos.last_status.name
-                                                                     ))
-                        self.trigger_event(MarketEvent.RangePositionCreated,
-                                           RangePositionCreatedEvent(self.current_timestamp,
-                                                                     tracked_pos.hb_id,
-                                                                     tracked_pos.last_tx_hash,
-                                                                     tracked_pos.token_id,
-                                                                     tracked_pos.trading_pair,
-                                                                     tracked_pos.fee_tier,
-                                                                     tracked_pos.lower_price,
-                                                                     tracked_pos.upper_price,
-                                                                     tracked_pos.base_amount,
-                                                                     tracked_pos.quote_amount,
-                                                                     tracked_pos.last_status.name,
-                                                                     tracked_pos.gas_price
-                                                                     ))
-                    elif result["name"] == "DecreaseLiquidity" and tracked_pos.last_status == UniswapV3PositionStatus.PENDING_REMOVE:
-                        token_id, amount0, amount1 = self.parse_liquidity_events(result["events"],
-                                                                                 transaction_results["baseDecimal"],
-                                                                                 transaction_results["quoteDecimal"])
-                        tracked_pos.token_id = token_id
-                        tracked_pos.last_status = UniswapV3PositionStatus.REMOVED
-                        self.logger().info(f"Liquidity decreased for tokenID - {token_id}.")
-                        self.trigger_event(MarketEvent.RangePositionUpdated,
-                                           RangePositionUpdatedEvent(self.current_timestamp,
-                                                                     tracked_pos.hb_id,
-                                                                     tracked_pos.last_tx_hash,
-                                                                     tracked_pos.token_id,
-                                                                     tracked_pos.base_amount,
-                                                                     tracked_pos.quote_amount,
-                                                                     tracked_pos.last_status.name
-                                                                     ))
-                        self.trigger_event(MarketEvent.RangePositionRemoved,
-                                           RangePositionRemovedEvent(self.current_timestamp, tracked_pos.hb_id,
-                                                                     tracked_pos.token_id))
-                        self.stop_tracking_position(tracked_pos.hb_id)
-                    elif result["name"] == "Collect":
-                        pass
-                        # not sure how to handle this at the moment
-                        # token_id, amount0, amount1 = self.parse_liquidity_events(result["events"])
-                        # tracked_order.update_exchange_order_id(token_id)
-                        # self.logger().info(f"Liquidity removed for tokenID - {token_id}.")
-            else:
-                self.logger().info(
-                    f"Error updating range position, token_id: {tracked_pos.token_id}, hb_id: {tracked_pos.hb_id}"
-                )
-                self.trigger_event(MarketEvent.RangePositionFailure,
-                                   RangePositionFailureEvent(self.current_timestamp, tracked_pos.hb_id))
-                self.stop_tracking_position(tracked_pos.hb_id)
-                tracked_pos.last_status = UniswapV3PositionStatus.FAILED
+        if not update_result.get("confirmed", False):
+            return
+        if update_result["receipt"].get("status", 0) == 1:
+            gas_used = update_result["receipt"]["gasUsed"]
+            gas_price = tracked_pos.gas_price
+            fee = Decimal(str(gas_used)) * Decimal(str(gas_price)) / Decimal(str(1e9))
+            tracked_pos.tx_fees.append(fee)
+            transaction_results = await self._api_request("post",
+                                                          "eth/uniswap/v3/result",
+                                                          {"logs": json.dumps(update_result["receipt"]["logs"]),
+                                                           "pair": tracked_pos.trading_pair})
+            for result in transaction_results["info"]:
+                if result["name"] == "IncreaseLiquidity" and tracked_pos.last_status == UniswapV3PositionStatus.PENDING_CREATE:
+                    token_id, amount0, amount1 = self.parse_liquidity_events(result["events"],
+                                                                             transaction_results["baseDecimal"],
+                                                                             transaction_results["quoteDecimal"])
+                    tracked_pos.token_id = token_id
+                    tracked_pos.base_amount = amount0
+                    tracked_pos.quote_amount = amount1
+                    tracked_pos.last_status = UniswapV3PositionStatus.OPEN
+                    self.logger().info(f"Liquidity added for tokenID - {token_id}.")
+                    self.trigger_event(MarketEvent.RangePositionUpdated,
+                                       RangePositionUpdatedEvent(self.current_timestamp,
+                                                                 tracked_pos.hb_id,
+                                                                 tracked_pos.last_tx_hash,
+                                                                 tracked_pos.token_id,
+                                                                 tracked_pos.base_amount,
+                                                                 tracked_pos.quote_amount,
+                                                                 tracked_pos.last_status.name
+                                                                 ))
+                    self.trigger_event(MarketEvent.RangePositionCreated,
+                                       RangePositionCreatedEvent(self.current_timestamp,
+                                                                 tracked_pos.hb_id,
+                                                                 tracked_pos.last_tx_hash,
+                                                                 tracked_pos.token_id,
+                                                                 tracked_pos.trading_pair,
+                                                                 tracked_pos.fee_tier,
+                                                                 tracked_pos.lower_price,
+                                                                 tracked_pos.upper_price,
+                                                                 tracked_pos.base_amount,
+                                                                 tracked_pos.quote_amount,
+                                                                 tracked_pos.last_status.name,
+                                                                 tracked_pos.gas_price
+                                                                 ))
+                elif result["name"] == "DecreaseLiquidity" and tracked_pos.last_status == UniswapV3PositionStatus.PENDING_REMOVE:
+                    token_id, amount0, amount1 = self.parse_liquidity_events(result["events"],
+                                                                             transaction_results["baseDecimal"],
+                                                                             transaction_results["quoteDecimal"])
+                    tracked_pos.token_id = token_id
+                    tracked_pos.last_status = UniswapV3PositionStatus.REMOVED
+                    self.logger().info(f"Liquidity decreased for tokenID - {token_id}.")
+                    self.trigger_event(MarketEvent.RangePositionUpdated,
+                                       RangePositionUpdatedEvent(self.current_timestamp,
+                                                                 tracked_pos.hb_id,
+                                                                 tracked_pos.last_tx_hash,
+                                                                 tracked_pos.token_id,
+                                                                 tracked_pos.base_amount,
+                                                                 tracked_pos.quote_amount,
+                                                                 tracked_pos.last_status.name
+                                                                 ))
+                    self.trigger_event(MarketEvent.RangePositionRemoved,
+                                       RangePositionRemovedEvent(self.current_timestamp, tracked_pos.hb_id,
+                                                                 tracked_pos.token_id))
+                    self.stop_tracking_position(tracked_pos.hb_id)
+        else:
+            self.logger().info(
+                f"Error updating range position, token_id: {tracked_pos.token_id}, hb_id: {tracked_pos.hb_id}"
+            )
+            self.trigger_event(MarketEvent.RangePositionFailure,
+                               RangePositionFailureEvent(self.current_timestamp, tracked_pos.hb_id))
+            self.stop_tracking_position(tracked_pos.hb_id)
+            tracked_pos.last_status = UniswapV3PositionStatus.FAILED
 
     async def _update_order_status(self):
         """
@@ -292,9 +286,12 @@ class UniswapV3Connector(UniswapConnector):
 
         # update info for each positions as well
         tasks = []
-        if len(open_positions) > 0:
-            for tracked_pos in open_positions:
-                tasks.append(self.get_position(tracked_pos.token_id))
+        if open_positions:
+            tasks.extend(
+                self.get_position(tracked_pos.token_id)
+                for tracked_pos in open_positions
+            )
+
         if tasks:
             position_results = await safe_gather(*tasks, return_exceptions=True)
             for update_result, tracked_item in zip(position_results, open_positions):
@@ -322,17 +319,16 @@ class UniswapV3Connector(UniswapConnector):
                                                                      tracked_item.token_id))
                         self.stop_tracking_position(tracked_item.hb_id)
 
+                    elif tracked_item.trading_pair.split("-")[0] == update_result["position"]["token0"]:
+                        tracked_item.current_base_amount = amount0
+                        tracked_item.current_quote_amount = amount1
+                        tracked_item.unclaimed_base_amount = unclaimedToken0
+                        tracked_item.unclaimed_quote_amount = unclaimedToken1
                     else:
-                        if tracked_item.trading_pair.split("-")[0] == update_result["position"]["token0"]:
-                            tracked_item.current_base_amount = amount0
-                            tracked_item.current_quote_amount = amount1
-                            tracked_item.unclaimed_base_amount = unclaimedToken0
-                            tracked_item.unclaimed_quote_amount = unclaimedToken1
-                        else:
-                            tracked_item.current_base_amount = amount1
-                            tracked_item.current_quote_amount = amount0
-                            tracked_item.unclaimed_base_amount = unclaimedToken1
-                            tracked_item.unclaimed_quote_amount = unclaimedToken0
+                        tracked_item.current_base_amount = amount1
+                        tracked_item.current_quote_amount = amount0
+                        tracked_item.unclaimed_base_amount = unclaimedToken1
+                        tracked_item.unclaimed_quote_amount = unclaimedToken0
 
     def add_position(self,
                      trading_pair: str,
@@ -472,17 +468,16 @@ class UniswapV3Connector(UniswapConnector):
                                              {"tokenId": token_id, "reducePercent": reducePercent, "getFee": str(fee_estimate)})
             if fee_estimate:
                 return Decimal(str(result.get("gasFee")))
-            else:
-                hash = result.get("hash")
-                action = "removal of" if reducePercent == Decimal("100.0") else \
-                         f"{reducePercent}% reduction of liquidity for"
-                self.logger().info(f"Initiated {action} of position with ID - {token_id}.")
-                tracked_pos.update_last_tx_hash(hash)
-                self.trigger_event(MarketEvent.RangePositionUpdated,
-                                   RangePositionUpdatedEvent(self.current_timestamp, tracked_pos.hb_id,
-                                                             tracked_pos.last_tx_hash, tracked_pos.token_id,
-                                                             tracked_pos.base_amount, tracked_pos.quote_amount,
-                                                             tracked_pos.last_status.name))
+            hash = result.get("hash")
+            action = "removal of" if reducePercent == Decimal("100.0") else \
+                     f"{reducePercent}% reduction of liquidity for"
+            self.logger().info(f"Initiated {action} of position with ID - {token_id}.")
+            tracked_pos.update_last_tx_hash(hash)
+            self.trigger_event(MarketEvent.RangePositionUpdated,
+                               RangePositionUpdatedEvent(self.current_timestamp, tracked_pos.hb_id,
+                                                         tracked_pos.last_tx_hash, tracked_pos.token_id,
+                                                         tracked_pos.base_amount, tracked_pos.quote_amount,
+                                                         tracked_pos.last_status.name))
         except Exception as e:
             # self.stop_tracking_position(hb_id)
             if not fee_estimate:
@@ -606,7 +601,12 @@ class UniswapV3Connector(UniswapConnector):
         Approves Uniswap contract as a spender for a token.
         :param token_symbol: token to approve.
         """
-        spender = "uniswapV3Router" if token_symbol[:1] == "R" else "uniswapV3NFTManager"
+        spender = (
+            "uniswapV3Router"
+            if token_symbol.startswith("R")
+            else "uniswapV3NFTManager"
+        )
+
         token_symbol = token_symbol[1:]
         resp = await self._api_request("post",
                                        "eth/approve",
@@ -638,9 +638,9 @@ class UniswapV3Connector(UniswapConnector):
                 ret_val["R" + token] = s_decimal_0"""
         for token, amount in nft_allowances["approvals"].items():
             try:
-                ret_val["N" + token] = Decimal(str(amount))
+                ret_val[f"N{token}"] = Decimal(str(amount))
             except Exception:
-                ret_val["N" + token] = s_decimal_0
+                ret_val[f"N{token}"] = s_decimal_0
         return ret_val
 
     def has_allowances(self) -> bool:

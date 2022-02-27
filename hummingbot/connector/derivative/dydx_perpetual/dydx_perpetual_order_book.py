@@ -22,12 +22,8 @@ class DydxPerpetualOrderBook(OrderBook):
                                        metadata: Optional[Dict] = None) -> OrderBookMessage:
         if metadata:
             msg.update(metadata)
-        if msg["rest"]:
-            bids = [{"price": Decimal(bid["price"]), "amount": Decimal(bid["size"])} for bid in msg["bids"]]
-            asks = [{"price": Decimal(ask["price"]), "amount": Decimal(ask["size"])} for ask in msg["asks"]]
-        else:
-            bids = [{"price": Decimal(bid['price']), "amount": Decimal(bid['size'])} for bid in msg["bids"]]
-            asks = [{"price": Decimal(ask['price']), "amount": Decimal(ask['size'])} for ask in msg["asks"]]
+        bids = [{"price": Decimal(bid["price"]), "amount": Decimal(bid["size"])} for bid in msg["bids"]]
+        asks = [{"price": Decimal(ask["price"]), "amount": Decimal(ask["size"])} for ask in msg["asks"]]
         return DydxPerpetualOrderBookMessage(OrderBookMessageType.SNAPSHOT, {
             "trading_pair": msg["trading_pair"],
             "update_id": timestamp,

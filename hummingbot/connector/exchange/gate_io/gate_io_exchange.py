@@ -442,27 +442,26 @@ class GateIoExchange(ExchangeBase):
             order_result = await self._api_request(request)
             if order_result.get('status') in {"cancelled", "expired", "failed"}:
                 raise GateIoAPIError({'label': 'ORDER_REJECTED', 'message': 'Order rejected.'})
-            else:
-                exchange_order_id = str(order_result["id"])
-                tracked_order = self._in_flight_orders.get(order_id)
-                if tracked_order is not None:
-                    self.logger().info(f"Created {order_type.name} {trade_type.name} order {order_id} for "
-                                       f"{amount} {trading_pair}.")
-                    tracked_order.update_exchange_order_id(exchange_order_id)
-                    if trade_type is TradeType.BUY:
-                        event_tag = MarketEvent.BuyOrderCreated
-                        event_cls = BuyOrderCreatedEvent
-                    else:
-                        event_tag = MarketEvent.SellOrderCreated
-                        event_cls = SellOrderCreatedEvent
-                    self.trigger_event(event_tag,
-                                       event_cls(self.current_timestamp,
-                                                 order_type,
-                                                 trading_pair,
-                                                 amount,
-                                                 price,
-                                                 order_id,
-                                                 exchange_order_id))
+            exchange_order_id = str(order_result["id"])
+            tracked_order = self._in_flight_orders.get(order_id)
+            if tracked_order is not None:
+                self.logger().info(f"Created {order_type.name} {trade_type.name} order {order_id} for "
+                                   f"{amount} {trading_pair}.")
+                tracked_order.update_exchange_order_id(exchange_order_id)
+                if trade_type is TradeType.BUY:
+                    event_tag = MarketEvent.BuyOrderCreated
+                    event_cls = BuyOrderCreatedEvent
+                else:
+                    event_tag = MarketEvent.SellOrderCreated
+                    event_cls = SellOrderCreatedEvent
+                self.trigger_event(event_tag,
+                                   event_cls(self.current_timestamp,
+                                             order_type,
+                                             trading_pair,
+                                             amount,
+                                             price,
+                                             order_id,
+                                             exchange_order_id))
         except asyncio.CancelledError:
             raise
         except Exception as e:
@@ -596,15 +595,13 @@ class GateIoExchange(ExchangeBase):
         Calls REST API to update total and available balances.
         """
         try:
-            # Check for in progress balance updates, queue if fetching and none already waiting, otherwise skip.
             if self._update_balances_fetching:
-                if not self._update_balances_queued:
-                    self._update_balances_queued = True
-                    await self._update_balances_finished.wait()
-                    self._update_balances_queued = False
-                    self._update_balances_finished = asyncio.Event()
-                else:
+                if self._update_balances_queued:
                     return
+                self._update_balances_queued = True
+                await self._update_balances_finished.wait()
+                self._update_balances_queued = False
+                self._update_balances_finished = asyncio.Event()
             self._update_balances_fetching = True
             endpoint = CONSTANTS.USER_BALANCES_PATH_URL
             request = GateIORESTRequest(
@@ -693,16 +690,15 @@ class GateIoExchange(ExchangeBase):
         # Process order trades first before processing order statuses
         trade_responses = await safe_gather(*order_trade_tasks, return_exceptions=True)
         for response, tracked_order in zip(trade_responses, tracked_orders):
-            if not isinstance(response, GateIoAPIError):
-                if len(response) > 0:
-                    for trade_fills in response:
-                        self._process_trade_message(trade_fills, tracked_order.client_order_id)
-            else:
+            if isinstance(response, GateIoAPIError):
                 self.logger().warning(f"Failed to fetch trade updates for order {tracked_order.client_order_id}. "
                                       f"Response: {response}")
                 if response.error_label == 'ORDER_NOT_FOUND':
                     self.stop_tracking_order_exceed_not_found_limit(tracked_order=tracked_order)
 
+            elif len(response) > 0:
+                for trade_fills in response:
+                    self._process_trade_message(trade_fills, tracked_order.client_order_id)
         status_responses = await safe_gather(*order_status_tasks, return_exceptions=True)
         for response, tracked_order in zip(status_responses, tracked_orders):
             if not isinstance(response, GateIoAPIError):
@@ -751,9 +747,7 @@ class GateIoExchange(ExchangeBase):
         """
 
         client_order_id = str(order_msg["text"])
-        tracked_order = self.in_flight_orders.get(client_order_id, None)
-        if tracked_order:
-
+        if tracked_order := self.in_flight_orders.get(client_order_id, None):
             tracked_order.last_state = order_msg.get("status", order_msg.get("event"))
 
             if tracked_order.is_cancelled:
@@ -793,8 +787,7 @@ class GateIoExchange(ExchangeBase):
         }
         """
         client_order_id = client_order_id or str(trade_msg["text"])
-        tracked_order = self.in_flight_orders.get(client_order_id, None)
-        if tracked_order:
+        if tracked_order := self.in_flight_orders.get(client_order_id, None):
             updated = tracked_order.update_with_trade_update(trade_msg)
             if updated:
                 self._trigger_order_fill(tracked_order=tracked_order,
@@ -877,7 +870,7 @@ class GateIoExchange(ExchangeBase):
         if self._trading_pairs is None:
             raise Exception("cancel_all can only be used when trading_pairs are specified.")
         open_orders = [o for o in self._in_flight_orders.values() if not o.is_done]
-        if len(open_orders) == 0:
+        if not open_orders:
             return []
         tasks = [self._execute_cancel(o.trading_pair, o.client_order_id) for o in open_orders]
         cancellation_results = []
@@ -905,9 +898,8 @@ class GateIoExchange(ExchangeBase):
                          else CONSTANTS.LONG_POLL_INTERVAL)
         last_tick = int(self._last_timestamp / poll_interval)
         current_tick = int(timestamp / poll_interval)
-        if current_tick > last_tick:
-            if not self._poll_notifier.is_set():
-                self._poll_notifier.set()
+        if current_tick > last_tick and not self._poll_notifier.is_set():
+            self._poll_notifier.set()
         self._last_timestamp = timestamp
 
     def get_fee(self,
@@ -993,15 +985,18 @@ class GateIoExchange(ExchangeBase):
                 ret_val.append(
                     OpenOrder(
                         client_order_id=order["text"],
-                        trading_pair=convert_from_exchange_trading_pair(order["currency_pair"]),
+                        trading_pair=convert_from_exchange_trading_pair(
+                            order["currency_pair"]
+                        ),
                         price=Decimal(str(order["price"])),
                         amount=Decimal(str(order["amount"])),
                         executed_amount=Decimal(str(order["filled_total"])),
                         status=order["status"],
                         order_type=OrderType.LIMIT,
-                        is_buy=True if order["side"].lower() == TradeType.BUY.name.lower() else False,
+                        is_buy=order["side"].lower() == TradeType.BUY.name.lower(),
                         time=int(order["create_time"]),
-                        exchange_order_id=order["id"]
+                        exchange_order_id=order["id"],
                     )
                 )
+
         return ret_val

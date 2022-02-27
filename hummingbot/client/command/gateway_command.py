@@ -74,15 +74,14 @@ class GatewayCommand:
         url = f"{base_url}/{path_url}"
         client = await self._http_client()
         if method == "get":
-            if len(params) > 0:
+            if params:
                 response = await client.get(url, params=params)
             else:
                 response = await client.get(url)
         elif method == "post":
             response = await client.post(url, data=params)
 
-        parsed_response = json.loads(await response.text())
-        return parsed_response
+        return json.loads(await response.text())
 
     async def _http_client(self) -> aiohttp.ClientSession:
         """
@@ -102,7 +101,7 @@ class GatewayCommand:
 
         try:
             config = await self.get_gateway_connections()
-            core_keys = [key for key in sorted(config["config"]['CORE'])]
+            core_keys = list(sorted(config["config"]['CORE']))
             other_keys = [key for key in sorted(config["config"]) if key not in ["CORE"]]
             all_keys = core_keys + other_keys
         except Exception:
@@ -174,12 +173,24 @@ class GatewayCommand:
                 columns = ["Parameter", "  Value"]
                 core_data = data = [[key, config['CORE'][key]] for key in sorted(config['CORE'])]
                 core_df = pd.DataFrame(data=core_data, columns=columns)
-                lines = ["    " + line for line in core_df.to_string(index=False, max_colwidth=50).split("\n")]
+                lines = [
+                    f"    {line}"
+                    for line in core_df.to_string(
+                        index=False, max_colwidth=50
+                    ).split("\n")
+                ]
+
                 self._notify("\n".join(lines))
                 self._notify("\nOther parameters:")
                 data = [[key, config[key]] for key in sorted(config) if key not in ['CORE']]
                 df = pd.DataFrame(data=data, columns=columns)
-                lines = ["    " + line for line in df.to_string(index=False, max_colwidth=50).split("\n")]
+                lines = [
+                    f"    {line}"
+                    for line in df.to_string(index=False, max_colwidth=50).split(
+                        "\n"
+                    )
+                ]
+
                 self._notify("\n".join(lines))
             else:
                 self._notify("\nError: Invalid return result")

@@ -76,7 +76,7 @@ class ClientOrderTracker:
         """
         Returns orders that are no longer actively tracked.
         """
-        return {client_order_id: order for client_order_id, order in self._cached_orders.items()}
+        return dict(self._cached_orders.items())
 
     @property
     def all_orders(self) -> Dict[str, InFlightOrder]:
@@ -122,10 +122,14 @@ class ClientOrderTracker:
         if client_order_id in self.all_orders:
             return self.all_orders[client_order_id]
 
-        for order in self.all_orders.values():
-            if order.exchange_order_id == exchange_order_id:
-                return order
-        return None
+        return next(
+            (
+                order
+                for order in self.all_orders.values()
+                if order.exchange_order_id == exchange_order_id
+            ),
+            None,
+        )
 
     def _trigger_created_event(self, order: InFlightOrder):
         event_tag = MarketEvent.BuyOrderCreated if order.trade_type is TradeType.BUY else MarketEvent.SellOrderCreated
@@ -290,8 +294,11 @@ class ClientOrderTracker:
 
         self._order_not_found_records[client_order_id] += 1
 
-        if self._order_not_found_records[client_order_id] > self.ORDER_NOT_FOUND_COUNT_LIMIT:
-            if not tracked_order.is_done:
-                tracked_order.current_state = OrderState.FAILED
-                self.stop_tracking_order(client_order_id=client_order_id)
-                self._trigger_failure_event(tracked_order)
+        if (
+            self._order_not_found_records[client_order_id]
+            > self.ORDER_NOT_FOUND_COUNT_LIMIT
+            and not tracked_order.is_done
+        ):
+            tracked_order.current_state = OrderState.FAILED
+            self.stop_tracking_order(client_order_id=client_order_id)
+            self._trigger_failure_event(tracked_order)

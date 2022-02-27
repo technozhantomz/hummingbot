@@ -72,5 +72,6 @@ class BlocktaneAPIUserStreamDataSource(UserStreamTrackerDataSource):
                 self._last_recv_time = time.time()
 
     def get_ws_connection(self):
-        ws = websockets.connect(WS_BASE_URL, extra_headers=self._blocktane_auth.generate_auth_dict())
-        return ws
+        return websockets.connect(
+            WS_BASE_URL, extra_headers=self._blocktane_auth.generate_auth_dict()
+        )

@@ -56,8 +56,7 @@ class GateIoAPIOrderBookDataSource(OrderBookTrackerDataSource):
 
     @classmethod
     def _get_throttler_instance(cls) -> AsyncThrottler:
-        throttler = AsyncThrottler(CONSTANTS.RATE_LIMITS)
-        return throttler
+        return AsyncThrottler(CONSTANTS.RATE_LIMITS)
 
     @classmethod
     async def get_last_traded_prices(cls, trading_pairs: List[str]) -> Dict[str, Decimal]:
@@ -79,7 +78,7 @@ class GateIoAPIOrderBookDataSource(OrderBookTrackerDataSource):
         tickers = await api_call_with_retries(request, rest_assistant, throttler, logging.getLogger())
         for trading_pair in trading_pairs:
             ex_pair = convert_to_exchange_trading_pair(trading_pair)
-            ticker = list([tic for tic in tickers if tic['currency_pair'] == ex_pair])[0]
+            ticker = [tic for tic in tickers if tic['currency_pair'] == ex_pair][0]
             results[trading_pair] = Decimal(str(ticker["last"]))
         return results
 
@@ -99,7 +98,10 @@ class GateIoAPIOrderBookDataSource(OrderBookTrackerDataSource):
                 symbols = await api_call_with_retries(
                     request, rest_assistant, throttler, logging.getLogger()
                 )
-            trading_pairs = list([convert_from_exchange_trading_pair(sym["id"]) for sym in symbols])
+            trading_pairs = [
+                convert_from_exchange_trading_pair(sym["id"]) for sym in symbols
+            ]
+
             # Filter out unmatched pairs so nothing breaks
             return [sym for sym in trading_pairs if sym is not None]
         except Exception:

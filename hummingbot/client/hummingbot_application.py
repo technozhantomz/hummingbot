@@ -142,9 +142,7 @@ class HummingbotApplication(*commands):
         else:
             command_split = raw_command.split()
         try:
-            if self.placeholder_mode:
-                pass
-            else:
+            if not self.placeholder_mode:
                 # Check if help is requested, if yes, print & terminate
                 if len(command_split) > 1 and any(arg in ["-h", "--help"] for arg in command_split[1:]):
                     self.help(command_split[0])
@@ -165,18 +163,17 @@ class HummingbotApplication(*commands):
                     num_shortcut_args = len(shortcut['arguments'])
                     if len(command_split) == num_shortcut_args + 1:
                         # notify each expansion if there's more than 1
-                        verbose = True if len(shortcut['output']) > 1 else False
+                        verbose = len(shortcut['output']) > 1
                         # do argument replace and re-enter this function with the expanded command
                         for output_cmd in shortcut['output']:
                             final_cmd = output_cmd
                             for i in range(1, num_shortcut_args + 1):
                                 final_cmd = final_cmd.replace(f'${i}', command_split[i])
-                            if verbose is True:
+                            if verbose:
                                 self._notify(f'  >>> {final_cmd}')
                             self._handle_command(final_cmd)
                     else:
                         self._notify('Invalid number of arguments for shortcut')
-                # regular command
                 else:
                     args = self.parser.parse_args(args=command_split)
                     kwargs = vars(args)
@@ -202,8 +199,9 @@ class HummingbotApplication(*commands):
 
             for market_name, market in self.markets.items():
                 cancellation_results = await market.cancel_all(kill_timeout)
-                uncancelled = list(filter(lambda cr: cr.success is False, cancellation_results))
-                if len(uncancelled) > 0:
+                if uncancelled := list(
+                    filter(lambda cr: cr.success is False, cancellation_results)
+                ):
                     success = False
                     uncancelled_order_ids = list(map(lambda cr: cr.order_id, uncancelled))
                     self._notify("\nFailed to cancel the following orders on %s:\n%s" % (
@@ -230,8 +228,7 @@ class HummingbotApplication(*commands):
 
     @staticmethod
     def _initialize_market_assets(market_name: str, trading_pairs: List[str]) -> List[Tuple[str, str]]:
-        market_trading_pairs: List[Tuple[str, str]] = [(trading_pair.split('-')) for trading_pair in trading_pairs]
-        return market_trading_pairs
+        return [(trading_pair.split('-')) for trading_pair in trading_pairs]
 
     def _initialize_markets(self, market_names: List[Tuple[str, List[str]]]):
         # aggregate trading_pairs if there are duplicate markets
@@ -275,16 +272,16 @@ class HummingbotApplication(*commands):
         self.markets_recorder.start()
 
     def _initialize_notifiers(self):
-        if global_config_map.get("telegram_enabled").value:
-            # TODO: refactor to use single instance
-            if not any([isinstance(n, TelegramNotifier) for n in self.notifiers]):
-                self.notifiers.append(
-                    TelegramNotifier(
-                        token=global_config_map["telegram_token"].value,
-                        chat_id=global_config_map["telegram_chat_id"].value,
-                        hb=self,
-                    )
+        if global_config_map.get("telegram_enabled").value and not any(
+            isinstance(n, TelegramNotifier) for n in self.notifiers
+        ):
+            self.notifiers.append(
+                TelegramNotifier(
+                    token=global_config_map["telegram_token"].value,
+                    chat_id=global_config_map["telegram_chat_id"].value,
+                    hb=self,
                 )
+            )
         for notifier in self.notifiers:
             notifier.start()
 

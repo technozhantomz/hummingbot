@@ -755,9 +755,8 @@ class CryptoComExchange(ExchangeBase):
                          else self.LONG_POLL_INTERVAL)
         last_tick = int(self._last_timestamp / poll_interval)
         current_tick = int(timestamp / poll_interval)
-        if current_tick > last_tick:
-            if not self._poll_notifier.is_set():
-                self._poll_notifier.set()
+        if current_tick > last_tick and not self._poll_notifier.is_set():
+            self._poll_notifier.set()
         self._last_timestamp = timestamp
 
     def get_fee(self,
@@ -834,15 +833,18 @@ class CryptoComExchange(ExchangeBase):
             ret_val.append(
                 OpenOrder(
                     client_order_id=order["client_oid"],
-                    trading_pair=crypto_com_utils.convert_from_exchange_trading_pair(order["instrument_name"]),
+                    trading_pair=crypto_com_utils.convert_from_exchange_trading_pair(
+                        order["instrument_name"]
+                    ),
                     price=Decimal(str(order["price"])),
                     amount=Decimal(str(order["quantity"])),
                     executed_amount=Decimal(str(order["cumulative_quantity"])),
                     status=order["status"],
                     order_type=OrderType.LIMIT,
-                    is_buy=True if order["side"].lower() == "buy" else False,
+                    is_buy=order["side"].lower() == "buy",
                     time=int(order["create_time"]),
-                    exchange_order_id=order["order_id"]
+                    exchange_order_id=order["order_id"],
                 )
             )
+
         return ret_val

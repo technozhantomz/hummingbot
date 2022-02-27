@@ -31,8 +31,7 @@ class BitmartAPIUserStreamDataSource(UserStreamTrackerDataSource):
 
     @classmethod
     def _get_throttler_instance(cls) -> AsyncThrottler:
-        throttler = AsyncThrottler(CONSTANTS.RATE_LIMITS)
-        return throttler
+        return AsyncThrottler(CONSTANTS.RATE_LIMITS)
 
     def __init__(
         self,
@@ -76,7 +75,7 @@ class BitmartAPIUserStreamDataSource(UserStreamTrackerDataSource):
 
             auth_resp: Dict[str, Any] = ws_response.data
 
-            if "errorCode" in auth_resp.keys():
+            if "errorCode" in auth_resp:
                 self.logger().error(f"WebSocket login errored with message: {auth_resp['errorMessage']}",
                                     exc_info=True)
                 raise ConnectionError

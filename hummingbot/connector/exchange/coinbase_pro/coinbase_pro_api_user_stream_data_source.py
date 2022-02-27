@@ -71,12 +71,9 @@ class CoinbaseProAPIUserStreamDataSource(UserStreamTrackerDataSource):
                         raise ValueError(f"Coinbase Pro Websocket message does not contain a type - {msg}")
                     elif msg_type == "error":
                         raise ValueError(f"Coinbase Pro Websocket received error message - {msg['message']}")
-                    elif msg_type in ["open", "match", "change", "done"]:
+                    elif msg_type in {"open", "match", "change", "done"}:
                         output.put_nowait(msg)
-                    elif msg_type in ["received", "activate", "subscriptions"]:
-                        # these messages are not needed to track the order book
-                        pass
-                    else:
+                    elif msg_type not in ["received", "activate", "subscriptions"]:
                         raise ValueError(f"Unrecognized Coinbase Pro Websocket message received - {msg}")
             except asyncio.CancelledError:
                 self._ws_assistant = None
@@ -101,8 +98,7 @@ class CoinbaseProAPIUserStreamDataSource(UserStreamTrackerDataSource):
         # Terminate the recv() loop as soon as the next message timed out, so the outer loop can reconnect.
         try:
             async for response in ws.iter_messages():
-                msg = response.data
-                yield msg
+                yield response.data
         except asyncio.TimeoutError:
             self.logger().warning("WebSocket ping timed out. Going to reconnect...")
         finally:
