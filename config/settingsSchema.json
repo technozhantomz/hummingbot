@@ -2,7 +2,7 @@
     "properties": {
         "cartTitle": {
             "type": "string",
-            "default": "expressCart"
+            "default": "commodity market"
         },
         "cartDescription": {
             "type": "string",
@@ -48,7 +48,7 @@
         },
         "footerHtml": {
             "type": "string",
-            "default": "&lt;h4 class=&quot;text-center&quot;&gt;Powered by commodity&lt;/h4&gt;"
+            "default": "&lt;h4 class=&quot;text-center&quot;&gt;Powered by commodity;"
         },
         "googleAnalytics": {
             "type": "string"
@@ -226,7 +226,7 @@
         },
         "commission": {
           "type": "number",
-          "default": 0
+          "default": 10
         },
         "categories": {
           "type": "array"
