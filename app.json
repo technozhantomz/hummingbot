@@ -1,7 +1,7 @@
 {
     "name": "CommodityLLC Store",
     "description": "A fully functioning Node.js shopping cart with Stripe, PayPal and Authorize.net payments.",
-    "repository": "https://gitlab.com/PBSA/dapps/NFT-store",
+    "repository": "https://github.com/technozhantomz/nft-store",
     "logo": "https://raw.githubusercontent.com/mrvautin/expressCart/master/public/images/logo.png",
     "keywords": [
         "Shopping cart",

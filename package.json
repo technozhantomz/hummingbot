@@ -114,14 +114,14 @@
     "payway",
     "westpac"
   ],
-  "author": "Peerplays",
-  "homepage": "https://gitlab.com/PBSA/dapps/NFT-store",
+  "author": "technoz",
+  "homepage": "https://github.com/technozhantomz/nft-store",
   "repository": {
     "type": "git",
-    "url": "git+https://gitlab.com/PBSA/dapps/NFT-store"
+    "url": "git+https://github.com/technozhantomz/nft-store"
   },
   "license": "MIT",
   "bugs": {
-    "url": "https://gitlab.com/PBSA/dapps/NFT-store/-/issues"
+    "url": "https://github.com/technozhantomz/nft-store/-/issues"
   }
 }
