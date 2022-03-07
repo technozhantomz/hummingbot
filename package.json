@@ -65,6 +65,7 @@
     "node-cron": "^2.0.3",
     "nodemailer": "^4.7.0",
     "numeral": "^2.0.6",
+     "nodemon": "^2.0.15",
     "object-hash": "^2.0.1",
     "paypal-rest-sdk": "^1.6.9",
     "rand-token": "^0.4.0",
