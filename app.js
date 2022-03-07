@@ -7,6 +7,7 @@ const path = require('path');
 const express = require('express');
 const logger = require('morgan');
 const cookieParser = require('cookie-parser');
+const bodyParser = require('body-parser');
 const session = require('express-session');
 const moment = require('moment');
 const _ = require('lodash');
@@ -361,7 +362,7 @@ app.use(helmet());
 app.set('port', process.env.PORT || 1111);
 app.use('/imgs', express.static(path.join(__dirname, 'uploads')));
 app.use(logger('dev'));
-app.use(express.urlencoded({ extended: false }));
+app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser(config.secretCookie));
 app.use(session({
     resave: true,

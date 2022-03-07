@@ -20,7 +20,7 @@
     "paymentGateway": [
         "stripe" 
     ],
-    "databaseConnectionString": "mongodb://ServiceAccount:Sdennis2021@127.0.0.1:27017/expresscart?authSource=admin",
+    "databaseConnectionString": "mongodb://ServiceAccount:Sdennis2021@localhost:27017/expresscart?authSource=admin",
     "theme": "Cloth",
     "trackStock": false,
     "orderHook": "",    
