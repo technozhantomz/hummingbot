@@ -376,7 +376,7 @@ app.use(session({
     store: store
 }));
 
-app.use(express.json({
+app.use(bodyParser.json({
     // Only on Stripe URL's which need the rawBody
     verify: (req, res, buf) => {
         if(req.originalUrl === '/stripe/subscription_update'){
