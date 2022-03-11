@@ -40,7 +40,7 @@
             <div class="form-group">
                 <label>{{ @root.__ "Currency ISO" }}</label>
                 <select class="form-control" name="currencyISO">
-                    <option {{selectState 'USD' config.currencyISO}} value="USD">USD</option>
+                    <option {{selectState 'EUR' config.currencyISO}} value="EUR">EUR</option>
                     <option {{selectState 'EUR' config.currencyISO}} value="EUR">EUR</option>
                     <option {{selectState 'GBP' config.currencyISO}} value="GBP">GBP</option>
                 </select>

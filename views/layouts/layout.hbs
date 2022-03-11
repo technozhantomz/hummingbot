@@ -193,7 +193,7 @@
     <body>
     {{/if}}
         {{#unless admin}}
-        <nav class="navbar navbar-expand-lg justify-content-between mainNavBar mobile-view-none mb-3 mt-4">
+        <nav class="navbar navbar-expand-lg justify-content-between mainNavBar mobile-view-enable mb-3 mt-4">
             <div class="tablet-none"> </div>
             {{!-- <a class="navbar-brand" href="/">
             {{#if @root.config.cartLogo}}
@@ -291,7 +291,7 @@
                 <div class="d-flex h-100">
                     <div class="col-12 align-self-center footer-heading-text">
                     {{#isNull @root.config.footerHtml}}
-                        <h5 class="text-center">Powered by Multi-commodities centre</h5>
+                        <h5 class="text-center">Powered by multi-commodity centre</h5>
                     {{else}}
                         {{{@root.config.footerHtml}}}
                     {{/isNull}}
@@ -317,7 +317,7 @@
         {{/if}}
         <script>
             feather.replace();
-            if(window.location.pathname == "/customer/login" || window.location.pathname =="/admin/login" || window.location.pathname =="/customer/setup"){
+            if(window.location.pathname == "/customer/login" || window.location.pathname =="/customer/setup" || window.location.pathname =="/admin/login"){
                document.getElementById("myDIV").className = "login-fullscreen";
                document.getElementById("loginclass").className = "login-box";
               }

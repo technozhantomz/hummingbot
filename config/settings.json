@@ -51,12 +51,12 @@
     "peeridUrl": "https://api.commodity.llc/api/v1/",
     "peeridClientID": "5",
     "peeridClientSecret": "ufaufgxO3FiI0HPSB3YY3fKgYJiwi4Dko7fbkmpAkR",
-    "peeridRedirectUri": "https://nftstore.peerplays.download/peerid_auth/redirect",
+    "peeridRedirectUri": "https://market.commodity.llc/peerid_auth/redirect",
     "peerplaysAssetID": "1.3.0",
     "peerplaysAssetSymbol": "USD",
     "peerplaysAssetPrecision": 5,
-    "peerplaysAccountID": "1.2.39",
+    "peerplaysAccountID": "1.2.8",
     "ppyExchangeRate": 0.2,
     "commission": 10,
-    "categories": ["Digital Art", "Photographs", "Oil Paintings", "Collectibles", "Fashion", "Games"]
+    "categories": ["Digital Art", "Photographs", "Oil Paintings", "Collectibles", "Fashion","Electronics","MotorCars","Games","Others"]
 }
