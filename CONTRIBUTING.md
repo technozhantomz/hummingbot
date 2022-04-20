@@ -28,6 +28,7 @@ Use GitHub's interface to make a fork of the repo, add the Hummingbot repo as an
 git remote add upstream https://github.com/CoinAlpha/hummingbot.git
 git fetch upstream
 ```
+....
 
 ### 2. Creating your branch
 
