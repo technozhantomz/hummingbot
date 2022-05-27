@@ -33,7 +33,7 @@ class BuildExt(build_ext):
 
 def main():
     cpu_count = os.cpu_count() or 8
-    version = "20220228"
+    version = "20220428"
     packages = find_packages(include=["hummingbot", "hummingbot.*"])
     package_data = {
         "hummingbot": [
@@ -51,12 +51,14 @@ def main():
         "aiokafka",
         "appdirs",
         "appnope",
+        "async-timeout",
         "bidict",
         "cachetools",
         "certifi",
         "cryptography",
         "cython",
         "cytoolz",
+        "docker",
         "diff-cover",
         "dydx-python",
         "dydx-v3-python",
@@ -72,6 +74,8 @@ def main():
         "importlib-metadata",
         "metanode",
         "mypy-extensions",
+        "nose",
+        "nose-exclude",
         "numpy",
         "pandas",
         "pip",
@@ -91,7 +95,7 @@ def main():
         "simplejson",
         "six",
         "sqlalchemy",
-        "sync-timeout",
+        "tabulate",
         "tzlocal",
         "ujson",
         "web3",
@@ -105,8 +109,6 @@ def main():
     }
 
     cython_sources = ["hummingbot/**/*.pyx"]
-    if os.path.exists('test'):
-        cython_sources.append("test/**/*.pyx")
 
     if os.environ.get('WITHOUT_CYTHON_OPTIMIZATIONS'):
         compiler_directives = {
